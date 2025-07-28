@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for a more modern look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(156, 163, 175, 0.5);
+        }
+        /* Basic transition for theme changes */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Animation for the loading dots */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-dot {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        /* Ensure the main chat area can flex correctly */
+        #main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-900 bg-white dark:text-gray-200 dark:bg-gray-800">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center">
+        <div class="text-gray-300">Initializing...</div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-72 flex-shrink-0 bg-gray-900 p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-xl font-bold text-white">Gemini Chat</h1>
+                <button id="theme-toggle-sidebar" class="p-2 rounded-full text-gray-400 hover:bg-gray-700 transition-colors">
+                    <!-- Moon/Sun icon will be injected here by JS -->
+                </button>
+            </div>
+            <button id="new-chat-btn" class="flex items-center justify-center w-full p-2 mb-4 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New Chat
+            </button>
+            <div id="chat-list-container" class="flex-grow overflow-y-auto -mr-2 pr-2">
+                <!-- Chat list will be populated here -->
+            </div>
+            <div id="user-id-container" class="text-xs text-gray-500 mt-4 border-t border-gray-700 pt-4">
+                <p>User ID: <span id="user-id-display" class="font-mono text-xs break-all"></span></p>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="flex-1">
+            <main id="chat-container" class="flex-1 flex flex-col p-6 overflow-y-auto justify-end">
+                <div class="w-full max-w-3xl mx-auto">
+                    <!-- Welcome screen -->
+                    <div id="welcome-screen" class="text-center mb-auto pt-20">
+                         <h2 class="text-4xl font-bold text-gray-500">What are you working on?</h2>
+                    </div>
+                    <!-- Messages will be populated here -->
+                    <ul id="message-list" class="space-y-6"></ul>
+                    <!-- Loading indicator -->
+                     <div id="loading-indicator" class="hidden">
+                        <li class="flex items-start gap-4 justify-start">
+                            <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+                               <svg class="w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg>
+                            </div>
+                            <div class="max-w-xl p-4 rounded-2xl bg-gray-700 rounded-bl-lg">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse-dot" style="animation-delay: 0s;"></span>
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse-dot" style="animation-delay: 0.2s;"></span>
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse-dot" style="animation-delay: 0.4s;"></span>
+                                </div>
+                            </div>
+                        </li>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Message Input Form -->
+            <footer class="p-6 w-full max-w-3xl mx-auto">
+                <form id="message-form" class="relative">
+                    <input id="message-input" type="text" placeholder="Ask anything..." class="w-full p-4 pr-14 rounded-xl bg-gray-700/80 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all shadow-lg text-gray-200" disabled>
+                    <button id="send-button" type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-blue-600 text-white disabled:bg-gray-500 hover:bg-blue-700 transition-colors" disabled>
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+            </footer>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, query, orderBy, addDoc, serverTimestamp, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DOM Elements ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const themeToggleBtn = document.getElementById('theme-toggle-sidebar');
+        const chatListContainer = document.getElementById('chat-list-container');
+        const messageList = document.getElementById('message-list');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const chatContainer = document.getElementById('chat-container');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        // --- App State ---
+        let db, auth;
+        let userId = null;
+        let theme = 'dark';
+        let chats = [];
+        let activeChatId = null;
+        let messages = [];
+        let isLoading = false;
+        let unsubscribeChats = () => {};
+        let unsubscribeMessages = () => {};
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-chatbot-app';
+        
+        // --- Icon Templates ---
+        const icons = {
+            sun: `<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+            moon: `<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
+        };
+
+        // --- Render Functions ---
+        const renderTheme = () => {
+            document.documentElement.className = theme;
+            themeToggleBtn.innerHTML = theme === 'light' ? icons.moon : icons.sun;
+        };
+
+        const renderChats = () => {
+            chatListContainer.innerHTML = '';
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-1';
+            chats.forEach(chat => {
+                const li = document.createElement('li');
+                const isActive = chat.id === activeChatId;
+                li.innerHTML = `
+                    <div data-id="${chat.id}" class="chat-item group flex items-center justify-between p-2 text-sm rounded-lg cursor-pointer transition-colors ${isActive ? 'bg-gray-700/70 text-white' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white'}">
+                        <span class="truncate">${chat.name}</span>
+                        <button data-id="${chat.id}" class="rename-btn opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                             <svg class="w-4 h-4 text-gray-500 hover:text-white" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                        </button>
+                    </div>`;
+                ul.appendChild(li);
+            });
+            chatListContainer.appendChild(ul);
+        };
+
+        const renderMessages = () => {
+            messageList.innerHTML = '';
+            if(messages.length > 0) {
+                welcomeScreen.classList.add('hidden');
+                chatContainer.classList.add('justify-end');
+                chatContainer.classList.remove('justify-center');
+
+            } else {
+                welcomeScreen.classList.remove('hidden');
+                chatContainer.classList.remove('justify-end');
+                chatContainer.classList.add('justify-center');
+            }
+            messages.forEach(msg => {
+                const li = document.createElement('li');
+                const isUser = msg.role === 'user';
+                li.className = `flex items-start gap-4 ${isUser ? 'justify-end' : 'justify-start'}`;
+                li.innerHTML = `
+                    ${!isUser ? `<div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg></div>` : ''}
+                    <div class="max-w-xl p-4 rounded-2xl ${isUser ? 'bg-blue-600 text-white rounded-br-lg' : 'bg-gray-700 text-gray-200 rounded-bl-lg'}">
+                        <p class="whitespace-pre-wrap">${msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                    </div>
+                    ${isUser ? `<div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>` : ''}
+                `;
+                messageList.appendChild(li);
+            });
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+        
+        const updateLoadingState = (state) => {
+            isLoading = state;
+            loadingIndicator.classList.toggle('hidden', !isLoading);
+            if(isLoading) messageList.appendChild(loadingIndicator);
+            messageInput.disabled = isLoading;
+            sendButton.disabled = isLoading || !messageInput.value.trim();
+            if(!isLoading) chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+
+        // --- Event Handlers ---
+        const handleThemeToggle = async () => {
+            theme = theme === 'light' ? 'dark' : 'light';
+            renderTheme();
+            if (!db || !userId) return;
+            const prefDocRef = doc(db, `artifacts/${appId}/users/${userId}/preferences`, 'user_settings');
+            try {
+                await setDoc(prefDocRef, { theme }, { merge: true });
+            } catch (error) {
+                console.error("Error saving theme preference:", error);
+            }
+        };
+
+        const handleNewChat = async () => {
+            setActiveChatId(null);
+        };
+
+        const handleSendMessage = async (e) => {
+            e.preventDefault();
+            const userMessage = messageInput.value.trim();
+            if (!userMessage || !db || !userId || isLoading) return;
+
+            let currentChatId = activeChatId;
+            const isNewChat = !currentChatId;
+            
+            updateLoadingState(true);
+            messageInput.value = '';
+            sendButton.disabled = true;
+
+            try {
+                if (isNewChat) {
+                    const newChatRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/chats`), { name: 'New Chat', createdAt: serverTimestamp() });
+                    currentChatId = newChatRef.id;
+                    setActiveChatId(currentChatId);
+                    
+                    const chatTitle = await getChatTitle(userMessage);
+                    await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/chats`, currentChatId), { name: chatTitle });
+                }
+
+                const messagesRef = collection(db, `artifacts/${appId}/users/${userId}/chats/${currentChatId}/messages`);
+                await addDoc(messagesRef, { text: userMessage, role: 'user', timestamp: serverTimestamp() });
+                
+                const chatHistory = messages.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+                const aiResponse = await getGeminiResponse(userMessage, chatHistory);
+                
+                await addDoc(messagesRef, { text: aiResponse, role: 'model', timestamp: serverTimestamp() });
+
+            } catch (error) {
+                console.error("Error sending message:", error);
+                const messagesRef = collection(db, `artifacts/${appId}/users/${userId}/chats/${currentChatId}/messages`);
+                await addDoc(messagesRef, { text: "Something went wrong. Please try again.", role: 'model', timestamp: serverTimestamp() });
+            } finally {
+                updateLoadingState(false);
+            }
+        };
+
+        // --- Firestore Listeners ---
+        const listenForChats = () => {
+            unsubscribeChats(); 
+            const chatsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/chats`);
+            const q = query(chatsCollectionRef, orderBy('createdAt', 'desc'));
+            unsubscribeChats = onSnapshot(q, (snapshot) => {
+                chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderChats();
+            });
+        };
+
+        const listenForMessages = (chatId) => {
+            unsubscribeMessages();
+            if (!chatId) {
+                messages = [];
+                renderMessages();
+                return;
+            }
+            const messagesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/chats/${chatId}/messages`);
+            const q = query(messagesCollectionRef, orderBy('timestamp'));
+            unsubscribeMessages = onSnapshot(q, (snapshot) => {
+                messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMessages();
+            });
+        };
+
+        const setActiveChatId = (id) => {
+            if (activeChatId === id) return;
+            activeChatId = id;
+            renderChats();
+            listenForMessages(id);
+        };
+        
+        // --- Gemini API Call ---
+        const getGeminiResponse = async (prompt, history) => {
+            const apiKey = ""; // Leave empty
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const payload = { contents: [...history, { role: "user", parts: [{ text: prompt }] }] };
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                const result = await response.json();
+                return result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't get a response.";
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return "An error occurred while contacting the AI.";
+            }
+        };
+        
+        const getChatTitle = async (prompt) => {
+            const titlePrompt = `Generate a very short, 2-4 word title for a conversation that starts with this message: "${prompt}". Just return the title, nothing else.`;
+            return await getGeminiResponse(titlePrompt, []);
+        };
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+             const firebaseConfig = {
+                apiKey: "AIzaSyAeoQusga7FK9IYPzzbYXzOinh0iVTZn0I",
+                authDomain: "triumind-store.firebaseapp.com",
+                projectId: "triumind-store",
+                storageBucket: "triumind-store.firebasestorage.app",
+                messagingSenderId: "1091612626687",
+                appId: "1:1091612626687:web:3fe91cc3d61d728e3f86ca",
+                measurementId: "G-JEZBMS38S0"
+            };
+
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                console.error("Firebase config is not set up.");
+                document.getElementById('main-content').innerHTML = `<div class="text-center text-red-500 p-8">Error: Firebase configuration is missing. Please add your project config to the script.</div>`;
+                loadingOverlay.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.textContent = userId;
+                        messageInput.disabled = false;
+                        
+                        const prefDocRef = doc(db, `artifacts/${appId}/users/${userId}/preferences`, 'user_settings');
+                        onSnapshot(prefDocRef, (docSnap) => {
+                            theme = (docSnap.exists() && docSnap.data().theme) ? docSnap.data().theme : 'dark';
+                            renderTheme();
+                        });
+
+                        listenForChats();
+                        loadingOverlay.classList.add('hidden');
+                    } else {
+                         try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("Error signing in:", error);
+                            loadingOverlay.innerText = "Error: Could not authenticate.";
+                        }
+                    }
+                });
+            } catch(e) {
+                console.error("Error initializing Firebase:", e);
+                loadingOverlay.innerText = "Error: Could not initialize the application.";
+            }
+
+            // --- Event Listeners Setup ---
+            themeToggleBtn.addEventListener('click', handleThemeToggle);
+            newChatBtn.addEventListener('click', handleNewChat);
+            messageForm.addEventListener('submit', handleSendMessage);
+            messageInput.addEventListener('input', () => {
+                sendButton.disabled = isLoading || !messageInput.value.trim();
+            });
+            chatListContainer.addEventListener('click', (e) => {
+                const chatItem = e.target.closest('.chat-item');
+                const renameBtn = e.target.closest('.rename-btn');
+
+                if (renameBtn) {
+                    e.stopPropagation();
+                    const chatId = renameBtn.dataset.id;
+                    const chat = chats.find(c => c.id === chatId);
+                    const newName = prompt("Enter new chat name:", chat.name);
+                    if (newName && newName.trim() && newName.trim() !== chat.name) {
+                        const chatDocRef = doc(db, `artifacts/${appId}/users/${userId}/chats`, chatId);
+                        updateDoc(chatDocRef, { name: newName.trim() });
+                    }
+                } else if (chatItem) {
+                    const chatId = chatItem.dataset.id;
+                    setActiveChatId(chatId);
+                }
+            });
+
+            renderTheme();
+            renderMessages(); // Initial render for the welcome screen
+        });
+    </script>
+</body>
+</html>
