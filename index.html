@@ -150,6 +150,13 @@
         // --- Render Functions ---
         const renderTheme = () => {
             document.documentElement.className = theme;
+            if (theme === 'dark') {
+                document.body.classList.add('dark:bg-gray-800', 'dark:text-gray-200');
+                document.body.classList.remove('bg-white', 'text-gray-900');
+            } else {
+                document.body.classList.remove('dark:bg-gray-800', 'dark:text-gray-200');
+                document.body.classList.add('bg-white', 'text-gray-900');
+            }
             themeToggleBtn.innerHTML = theme === 'light' ? icons.moon : icons.sun;
         };
 
