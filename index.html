@@ -38,7 +38,14 @@
             flex-direction: column;
             height: 100vh;
         }
+        .gemini-font {
+            font-family: 'Google Sans', sans-serif !important;
+        }
+        .gemini-font b, .gemini-font strong {
+            font-weight: 600 !important;
+        }
     </style>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;600&display=swap">
 </head>
 <body class="font-sans antialiased text-gray-900 bg-white dark:text-gray-200 dark:bg-gray-800">
 
@@ -150,6 +157,18 @@
         // --- Render Functions ---
         const renderTheme = () => {
             document.documentElement.className = theme;
+            const sidebar = document.getElementById('sidebar');
+            if (theme === 'dark') {
+                document.body.classList.add('dark:bg-gray-800', 'dark:text-gray-200');
+                document.body.classList.remove('bg-white', 'text-gray-900');
+                sidebar.classList.add('bg-gray-900');
+                sidebar.classList.remove('bg-gray-100');
+            } else {
+                document.body.classList.remove('dark:bg-gray-800', 'dark:text-gray-200');
+                document.body.classList.add('bg-white', 'text-gray-900');
+                sidebar.classList.remove('bg-gray-900');
+                sidebar.classList.add('bg-gray-100');
+            }
             themeToggleBtn.innerHTML = theme === 'light' ? icons.moon : icons.sun;
         };
 
@@ -191,13 +210,13 @@
                 li.innerHTML = `
                     ${!isUser ? `<div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg></div>` : ''}
                     <div class="max-w-xl p-4 rounded-2xl ${isUser ? 'bg-blue-600 text-white rounded-br-lg' : 'bg-gray-700 text-gray-200 rounded-bl-lg'}">
-                        <p class="whitespace-pre-wrap">${msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                        <p class="whitespace-pre-wrap ${!isUser ? 'gemini-font' : ''}">${msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
                     </div>
-                    ${isUser ? `<div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>` : ''}
+                    ${isUser ? `<div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text_gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>` : ''}
                 `;
                 messageList.appendChild(li);
             });
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            chatContainer.scrollTop = 0;
         };
         
         const updateLoadingState = (state) => {
@@ -300,7 +319,7 @@
         
         // --- Gemini API Call ---
         const getGeminiResponse = async (prompt, history) => {
-            const apiKey = ""; // Leave empty
+            const apiKey = "AIzaSyA6eRwusLfHTjBJRFQQHQTorhD2IpGwVlw"; // Leave empty
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
             const payload = { contents: [...history, { role: "user", parts: [{ text: prompt }] }] };
             try {
