@@ -150,12 +150,17 @@
         // --- Render Functions ---
         const renderTheme = () => {
             document.documentElement.className = theme;
+            const sidebar = document.getElementById('sidebar');
             if (theme === 'dark') {
                 document.body.classList.add('dark:bg-gray-800', 'dark:text-gray-200');
                 document.body.classList.remove('bg-white', 'text-gray-900');
+                sidebar.classList.add('bg-gray-900');
+                sidebar.classList.remove('bg-gray-100');
             } else {
                 document.body.classList.remove('dark:bg-gray-800', 'dark:text-gray-200');
                 document.body.classList.add('bg-white', 'text-gray-900');
+                sidebar.classList.remove('bg-gray-900');
+                sidebar.classList.add('bg-gray-100');
             }
             themeToggleBtn.innerHTML = theme === 'light' ? icons.moon : icons.sun;
         };
