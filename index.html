@@ -1,478 +1,590 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayham Chat</title>
+    <title>FirstStep - Dispatcher Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Marked.js for Markdown parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- highlight.js for code syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        /* Google Sans font */
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+        :root {
+            --bg-primary: #F7F8FA;
+            --bg-secondary: #FFFFFF;
+            --bg-third: #F1F5F9;
+            --border-secondary: #E5E7EB;
+            --text-orange: #F97316;
+            --bg-orange: #F97316;
+            --bg-orange-dark: #EA580C;
+            --text-primary: #111827;
+            --text-secondary: #6B7280;
+            --text-tertiary: #9CA3AF;
+            --status-available: #22C55E;
+            --status-offline: #EF4444;
+        }
 
         body {
-            font-family: 'Google Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
         }
 
-        /* Custom scrollbar for a modern look */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.3);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(156, 163, 175, 0.5);
+        .card {
+            background-color: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-secondary);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
         }
 
-        /* Smooth transitions for theme changes */
-        body, .bg-transition {
-            transition: background-color 0.3s ease, color 0.3s ease;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -4px rgba(0,0,0,0.07);
         }
+        
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: var(--bg-secondary); margin: 5% auto; padding: 2rem; border: 1px solid var(--border-secondary); width: 90%; max-width: 600px; border-radius: 20px; position: relative; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
+        .close-button { color: var(--text-secondary); position: absolute; top: 1rem; right: 1.5rem; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: var(--text-primary); }
 
-        /* Animation for the loading dots */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .animate-pulse-dot {
-            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+        .sidebar { width: 5rem; transition: width 0.3s ease-in-out; flex-shrink: 0; }
+        .sidebar:hover { width: 16rem; }
+        .sidebar .nav-link-title, .sidebar .logout-text { opacity: 0; transition: opacity 0.2s ease-in-out; white-space: nowrap; font-weight: 600; }
+        .sidebar:hover .nav-link-title, .sidebar:hover .logout-text { opacity: 1; transition-delay: 0.1s; }
+        
+        .nav-link.active { background-color: var(--bg-orange); color: white; }
+        .nav-link.active:hover { color: white; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .status-pill { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
+        .status-scheduled { background-color: #16a34a; color: #ffffff; }
+        .status-needs-scheduling { background-color: #ca8a04; color: #ffffff; }
 
-        /* Markdown-rendered content styling */
-        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
-            font-weight: bold;
-            margin-top: 1em;
-            margin-bottom: 0.5em;
-        }
-        .markdown-content p {
-            margin-bottom: 1em;
-            line-height: 1.6;
-        }
-        .markdown-content ul {
-            list-style-type: disc;
-            padding-left: 1.5em;
-            margin-bottom: 1em;
-        }
-        .markdown-content ol {
-            list-style-type: decimal;
-            padding-left: 1.5em;
-            margin-bottom: 1em;
-        }
-        .markdown-content li {
-            margin-bottom: 0.25em;
-        }
-        .markdown-content a {
-            color: #3b82f6; /* blue-500 */
-            text-decoration: underline;
-        }
-        .markdown-content pre {
-            background-color: #1f2937; /* gray-800 */
-            color: #f3f4f6; /* gray-100 */
-            padding: 1rem;
-            border-radius: 0.75rem;
-            margin-bottom: 1em;
-            overflow-x: auto;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        .dark .markdown-content pre {
-             background-color: #2d3748; /* A slightly lighter dark for contrast */
-        }
-        .markdown-content code:not(pre code) {
-            background-color: #e5e7eb; /* gray-200 */
-            padding: 0.2em 0.4em;
-            margin: 0;
-            font-size: 85%;
-            border-radius: 3px;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        .dark .markdown-content code:not(pre code) {
-            background-color: #4a5568; /* gray-600 */
-        }
     </style>
 </head>
-<body class="font-sans antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 bg-transition">
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex items-center justify-center">
-        <div class="text-gray-500 dark:text-gray-400">Initializing Chat...</div>
-    </div>
-
-    <div class="flex h-screen">
+<body class="flex flex-col min-h-screen">
+    <div class="flex flex-1 h-screen">
         <!-- Sidebar -->
-        <div id="sidebar" class="w-72 flex-shrink-0 bg-gray-100 dark:bg-black/20 p-4 flex flex-col bg-transition">
-            <div class="flex items-center justify-between mb-4">
-                <h1 class="text-xl font-bold text-gray-800 dark:text-white">Ayham Chat</h1>
-                <button id="theme-toggle-sidebar" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <!-- Moon/Sun icon will be injected here by JS -->
+        <aside class="sidebar bg-[var(--bg-secondary)] flex flex-col items-center py-6 border-r border-[var(--border-secondary)]">
+            <div class="text-[var(--text-orange)] text-2xl font-bold mb-12">FS</div>
+            <nav id="sidebar-nav" class="flex flex-col items-start w-full space-y-2 flex-grow justify-center px-4">
+                <a href="#" data-tab="dashboard" class="nav-link active w-full flex items-center p-3 rounded-lg"><span class="material-icons">dashboard</span><span class="nav-link-title ml-4">Dashboard</span></a>
+                <a href="#" data-tab="jobs" class="nav-link w-full flex items-center p-3 text-gray-500 hover:text-[var(--text-orange)] rounded-lg hover:bg-gray-100 transition-colors"><span class="material-icons">work</span><span class="nav-link-title ml-4">Jobs</span></a>
+                <a href="#" data-tab="technicians" class="nav-link w-full flex items-center p-3 text-gray-500 hover:text-[var(--text-orange)] rounded-lg hover:bg-gray-100 transition-colors"><span class="material-icons">engineering</span><span class="nav-link-title ml-4">Technicians</span></a>
+                <a href="#" data-tab="schedule" class="nav-link w-full flex items-center p-3 text-gray-500 hover:text-[var(--text-orange)] rounded-lg hover:bg-gray-100 transition-colors"><span class="material-icons">calendar_today</span><span class="nav-link-title ml-4">Schedule</span></a>
+            </nav>
+            <div class="w-full px-4">
+                <div class="w-full flex items-center p-3">
+                    <div class="w-10 h-10 rounded-full bg-[var(--bg-orange)] flex items-center justify-center text-white font-bold flex-shrink-0">A</div>
+                    <span class="nav-link-title ml-4">Admin</span>
+                </div>
+                 <button class="w-full flex items-center p-3 text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors mt-2">
+                    <span class="material-icons">logout</span>
+                    <span class="logout-text ml-4">Logout</span>
                 </button>
             </div>
-            <button id="new-chat-btn" class="flex items-center justify-center w-full p-2 mb-4 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                New Chat
-            </button>
-            <div id="chat-list-container" class="flex-grow overflow-y-auto -mr-2 pr-2">
-                <!-- Chat list will be populated here -->
-            </div>
-            <div id="user-id-container" class="text-xs text-gray-500 dark:text-gray-400 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <p>User ID: <span id="user-id-display" class="font-mono text-xs break-all"></span></p>
-            </div>
-        </div>
+        </aside>
 
-        <!-- Main Content Area -->
-        <div id="main-content" class="flex-1 flex flex-col bg-white dark:bg-gray-900 bg-transition">
-            <main id="chat-container" class="flex-1 p-6 overflow-y-auto">
-                <div class="w-full max-w-4xl mx-auto">
-                    <!-- Welcome screen -->
-                    <div id="welcome-screen" class="text-center pt-20">
-                         <h2 class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">What are you working on?</h2>
+        <!-- Main Content -->
+        <main class="flex-1 p-6 sm:p-10 overflow-y-auto">
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10">
+                    <div>
+                        <h1 class="text-3xl font-bold text-[var(--text-primary)]">Dispatcher Dashboard</h1>
+                        <p class="text-base text-[var(--text-secondary)]">Overview of key metrics and performance indicators</p>
                     </div>
-                    <!-- Messages will be populated here -->
-                    <ul id="message-list" class="space-y-8"></ul>
-                     <!-- Loading indicator -->
-                     <div id="loading-indicator" class="hidden">
-                        <li class="flex items-start gap-4 justify-start">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                               <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg>
-                            </div>
-                            <div class="max-w-2xl p-4 rounded-2xl bg-gray-100 dark:bg-gray-800 rounded-bl-lg">
-                                <div class="flex items-center space-x-2">
-                                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse-dot" style="animation-delay: 0s;"></span>
-                                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse-dot" style="animation-delay: 0.2s;"></span>
-                                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse-dot" style="animation-delay: 0.4s;"></span>
-                                </div>
-                            </div>
-                        </li>
+                    <button id="createJobBtn" class="bg-[var(--bg-orange)] text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2 hover:bg-[var(--bg-orange-dark)] transition-colors mt-4 sm:mt-0"><span class="material-icons">add</span><span>Create New Job</span></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+                    <div class="card flex justify-between items-center"><div><p class="text-sm text-[var(--text-secondary)]">Needs Scheduling</p><p id="pendingJobs" class="text-3xl font-bold text-[var(--text-primary)]">3</p></div><div class="p-3 bg-orange-100 rounded-full"><span class="material-icons text-orange-500 text-2xl">pending_actions</span></div></div>
+                    <div class="card flex justify-between items-center"><div><p class="text-sm text-[var(--text-secondary)]">Total Technicians</p><p id="total-technicians-stat" class="text-3xl font-bold text-[var(--text-primary)]">25</p></div><div class="p-3 bg-blue-100 rounded-full"><span class="material-icons text-blue-500 text-2xl">engineering</span></div></div>
+                    <div class="card flex justify-between items-center"><div><p class="text-sm text-[var(--text-secondary)]">Scheduled Jobs</p><p id="completedJobs" class="text-3xl font-bold text-[var(--text-primary)]">15</p></div><div class="p-3 bg-green-100 rounded-full"><span class="material-icons text-green-500 text-2xl">task_alt</span></div></div>
+                    <div class="card flex justify-between items-center"><div><p class="text-sm text-[var(--text-secondary)]">Avg Response Time</p><p class="text-3xl font-bold text-[var(--text-primary)]">30m</p></div><div class="p-3 bg-purple-100 rounded-full"><span class="material-icons text-purple-500 text-2xl">timer</span></div></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div class="card h-full flex flex-col lg:col-span-3"><h2 class="text-xl font-bold mb-4">Online Technicians</h2><div id="technicians-list" class="space-y-3 flex-grow"></div></div>
+                    <div class="card h-full flex flex-col lg:col-span-2"><h2 class="text-xl font-bold mb-4">Upcoming Jobs</h2><div class="text-center mb-4"><p id="calendar-date" class="text-4xl font-bold text-[var(--text-primary)]">24</p><p id="calendar-month-year" class="text-lg text-[var(--text-secondary)]">July, 2024</p></div><div id="jobs-list" class="space-y-3 flex-grow"></div></div>
+                </div>
+            </div>
+
+            <!-- Jobs Tab -->
+            <div id="jobs-tab" class="tab-content">
+                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold">All Jobs</h1>
+                        <p class="text-base text-[var(--text-secondary)]">Manage and view all customer job requests.</p>
+                    </div>
+                    <button id="createJobBtn2" class="bg-[var(--bg-orange)] text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2 hover:bg-[var(--bg-orange-dark)] transition-colors mt-4 sm:mt-0"><span class="material-icons">add</span><span>Create New Job</span></button>
+                </div>
+                <div class="bg-[var(--bg-secondary)] rounded-2xl shadow-lg overflow-hidden border border-[var(--border-secondary)]">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 border-b border-[var(--border-secondary)]">
+                                <tr>
+                                    <th class="p-4 text-sm font-semibold text-[var(--text-secondary)]">Customer Name</th>
+                                    <th class="p-4 text-sm font-semibold text-[var(--text-secondary)]">Address</th>
+                                    <th class="p-4 text-sm font-semibold text-[var(--text-secondary)]">Issue Reported</th>
+                                    <th class="p-4 text-sm font-semibold text-[var(--text-secondary)]">Phone</th>
+                                    <th class="p-4 text-sm font-semibold text-[var(--text-secondary)]">Status</th>
+                                    <th class="p-4 text-sm font-semibold text-[var(--text-secondary)]">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobs-table-body" class="divide-y divide-[var(--border-secondary)] text-sm"></tbody>
+                        </table>
                     </div>
                 </div>
-            </main>
+            </div>
+            
+            <!-- Technicians Tab -->
+            <div id="technicians-tab" class="tab-content">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold">Technicians</h1>
+                        <p class="text-base text-[var(--text-secondary)]">Manage and view technician status</p>
+                    </div>
+                    <button id="addTechnicianBtn" class="bg-[var(--bg-orange)] text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2 hover:bg-[var(--bg-orange-dark)] transition-colors"><span class="material-icons">add</span><span>Add Technician</span></button>
+                </div>
+                <div id="technicians-card-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6"></div>
+            </div>
 
-            <!-- Message Input Form -->
-            <footer class="p-6 w-full max-w-4xl mx-auto">
-                <form id="message-form" class="relative">
-                    <input id="message-input" type="text" placeholder="Ask anything..." class="w-full p-4 pr-14 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all shadow-lg text-gray-900 dark:text-gray-200" disabled>
-                    <button id="send-button" type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-blue-600 text-white disabled:bg-gray-400 dark:disabled:bg-gray-600 hover:bg-blue-700 transition-colors" disabled>
-                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
-                </form>
-            </footer>
+            <!-- Schedule Tab -->
+            <div id="schedule-tab" class="tab-content">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-xl font-bold">Schedule</h1>
+                        <p class="text-xs text-[var(--text-secondary)]">Manage and optimize technician routes for the day.</p>
+                    </div>
+                    <button class="bg-[var(--bg-orange)] text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-[var(--bg-orange-dark)] transition-colors text-sm"><span class="material-icons !text-xl">route</span><span>Optimize Routes</span></button>
+                </div>
+                <div class="card p-4">
+                    <h2 class="text-lg font-bold mb-4 text-[var(--text-orange)]">Today’s Schedule</h2>
+                    <div id="schedule-container" class="space-y-4">
+                        <!-- Schedule will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="bg-[var(--bg-third)] text-[var(--text-secondary)] py-4 px-8 border-t border-[var(--border-secondary)]"><div class="container mx-auto text-center"><p class="text-sm"><span class="font-bold text-xl text-[var(--text-primary)]">FirstStep</span> &copy; 2024. All rights reserved.</p></div></footer>
+
+    <!-- Job Modal -->
+    <div id="jobModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeJobModal">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-center">Create a New Job</h2>
+            <form id="jobForm">
+                <div class="mb-4"><label for="customerName" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Customer Name</label><input type="text" id="customerName" name="customerName" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></div>
+                <div class="mb-4"><label for="jobIssue" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Issue Reported</label><textarea id="jobIssue" name="jobIssue" rows="3" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></textarea></div>
+                <div class="mb-4"><label for="jobLocation" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Address</label><input type="text" id="jobLocation" name="jobLocation" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></div>
+                <div class="mb-6"><label for="customerPhone" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Phone</label><input type="tel" id="customerPhone" name="customerPhone" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></div>
+                <button type="submit" class="w-full bg-[var(--bg-orange)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--bg-orange-dark)] transition-colors">Add Job</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Technician Modal -->
+    <div id="techModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeTechModal">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-center">Add New Technician</h2>
+            <form id="techForm">
+                <div class="mb-4"><label for="techName" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Technician Name</label><input type="text" id="techName" name="techName" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></div>
+                <div class="mb-6"><label for="techLocation" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Location</label><input type="text" id="techLocation" name="techLocation" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></div>
+                <button type="submit" class="w-full bg-[var(--bg-orange)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--bg-orange-dark)] transition-colors">Add Technician</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Manage Technician Modal -->
+    <div id="manageTechModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeManageTechModal">&times;</span>
+            <h2 class="text-2xl font-bold mb-6 text-center">Manage Technician</h2>
+            <form id="manageTechForm">
+                <input type="hidden" id="manageTechId">
+                <div class="mb-4"><label for="manageTechName" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Technician Name</label><input type="text" id="manageTechName" name="manageTechName" class="w-full bg-gray-100 border border-[var(--border-secondary)] rounded-lg px-3 py-2" disabled></div>
+                <div class="mb-4"><label for="manageTechLocation" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Location</label><input type="text" id="manageTechLocation" name="manageTechLocation" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required></div>
+                <div class="mb-6"><label for="manageTechCapacity" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Capacity (Max Jobs)</label><input type="number" id="manageTechCapacity" name="manageTechCapacity" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required min="1"></div>
+                <button type="submit" class="w-full bg-[var(--bg-orange)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--bg-orange-dark)] transition-colors">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Schedule Job Modal -->
+    <div id="scheduleJobModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeScheduleJobModal">&times;</span>
+            <h2 class="text-2xl font-bold mb-4 text-center">Schedule Job</h2>
+            <div class="text-sm space-y-2 mb-4 border-b border-[var(--border-secondary)] pb-4">
+                <p><strong class="font-semibold text-gray-600">Customer:</strong> <span id="schedule-customer-name"></span></p>
+                <p><strong class="font-semibold text-gray-600">Address:</strong> <span id="schedule-address"></span></p>
+                <p><strong class="font-semibold text-gray-600">Issue:</strong> <span id="schedule-issue"></span></p>
+                <p><strong class="font-semibold text-gray-600">Warranty Provider:</strong> <span id="schedule-warranty"></span></p>
+                <p><strong class="font-semibold text-gray-600">Plan Type:</strong> <span id="schedule-plan"></span></p>
+                <p><strong class="font-semibold text-gray-600">Dispatch/PO Number:</strong> <span id="schedule-dispatch"></span></p>
+            </div>
+            <form id="scheduleJobForm">
+                <input type="hidden" id="scheduleJobId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="scheduleDate" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Select Date</label>
+                        <input type="date" id="scheduleDate" name="scheduleDate" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required>
+                    </div>
+                    <div>
+                        <label for="scheduleTime" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Select Time Slot</label>
+                        <select id="scheduleTime" name="scheduleTime" class="w-full bg-gray-50 border border-[var(--border-secondary)] rounded-lg px-3 py-2 focus:ring-[var(--text-orange)] focus:border-[var(--text-orange)]" required>
+                            <option>08:00 AM - 10:00 AM</option>
+                            <option>10:00 AM - 12:00 PM</option>
+                            <option>12:00 PM - 02:00 PM</option>
+                            <option>02:00 PM - 04:00 PM</option>
+                            <option>04:00 PM - 06:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[var(--bg-orange)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--bg-orange-dark)] transition-colors mt-6">Schedule Job</button>
+            </form>
         </div>
     </div>
 
-    <script type="module">
-        // Firebase imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, query, addDoc, serverTimestamp, updateDoc, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- DOM Elements ---
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const newChatBtn = document.getElementById('new-chat-btn');
-        const themeToggleBtn = document.getElementById('theme-toggle-sidebar');
-        const chatListContainer = document.getElementById('chat-list-container');
-        const messageList = document.getElementById('message-list');
-        const messageForm = document.getElementById('message-form');
-        const messageInput = document.getElementById('message-input');
-        const sendButton = document.getElementById('send-button');
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const chatContainer = document.getElementById('chat-container');
-        const userIdDisplay = document.getElementById('user-id-display');
-
-        // --- App State ---
-        let db, auth;
-        let userId = null;
-        let theme = 'dark';
-        let chats = [];
-        let activeChatId = null;
-        let messages = [];
-        let isLoading = false;
-        let unsubscribeChats = () => {};
-        let unsubscribeMessages = () => {};
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-chatbot-app';
-        
-        // --- Icon Templates ---
-        const icons = {
-            sun: `<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
-            moon: `<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
-        };
-
-        // --- Render Functions ---
-        const renderTheme = () => {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-            themeToggleBtn.innerHTML = theme === 'light' ? icons.moon : icons.sun;
-        };
-
-        const renderChats = () => {
-            chatListContainer.innerHTML = '';
-            const ul = document.createElement('ul');
-            ul.className = 'space-y-1';
-            chats.forEach(chat => {
-                const li = document.createElement('li');
-                const isActive = chat.id === activeChatId;
-                li.innerHTML = `
-                    <div data-id="${chat.id}" class="chat-item group flex items-center justify-between p-2 text-sm rounded-lg cursor-pointer transition-colors ${isActive ? 'bg-blue-100 dark:bg-gray-700/70 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}">
-                        <span class="truncate">${chat.name}</span>
-                    </div>`;
-                ul.appendChild(li);
-            });
-            chatListContainer.appendChild(ul);
-        };
-
-        const renderMessages = () => {
-            // --- FIX: Smart scrolling ---
-            // Check if user is scrolled near the bottom before rendering new messages
-            const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 100;
-
-            messageList.innerHTML = '';
-            if(messages.length > 0) {
-                welcomeScreen.classList.add('hidden');
-            } else {
-                welcomeScreen.classList.remove('hidden');
-            }
-
-            messages.forEach(msg => {
-                const li = document.createElement('li');
-                const isUser = msg.role === 'user';
-                
-                // --- UPGRADE: Modern Gemini-style chat bubbles ---
-                li.className = `flex items-start gap-4 ${isUser ? 'justify-end' : 'justify-start'}`;
-                
-                const parsedContent = marked.parse(msg.text || '');
-
-                li.innerHTML = `
-                    ${!isUser ? `<div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg></div>` : ''}
-                    
-                    <div class="max-w-2xl p-4 rounded-2xl shadow-sm ${isUser ? 'bg-blue-600 text-white rounded-br-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-200 rounded-bl-lg'}">
-                        <div class="markdown-content">${parsedContent}</div>
-                    </div>
-                    
-                    ${isUser ? `<div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>` : ''}
-                `;
-                messageList.appendChild(li);
-            });
-            
-            // Apply syntax highlighting to all code blocks
-            document.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-
-            // --- FIX: Scroll to bottom only if user was already at the bottom ---
-            if (isScrolledToBottom) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        };
-        
-        const updateLoadingState = (state) => {
-            isLoading = state;
-            loadingIndicator.classList.toggle('hidden', !isLoading);
-            if(isLoading) {
-                messageList.appendChild(loadingIndicator);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-            messageInput.disabled = isLoading;
-            sendButton.disabled = isLoading || !messageInput.value.trim();
-        };
-
-        // --- Event Handlers ---
-        const handleThemeToggle = async () => {
-            theme = theme === 'light' ? 'dark' : 'light';
-            renderTheme();
-            if (!db || !userId) return;
-            const prefDocRef = doc(db, `artifacts/${appId}/users/${userId}/preferences`, 'user_settings');
-            try {
-                await setDoc(prefDocRef, { theme }, { merge: true });
-            } catch (error) {
-                console.error("Error saving theme preference:", error);
-            }
-        };
-
-        const handleNewChat = async () => {
-            setActiveChatId(null);
-        };
-
-        const handleSendMessage = async (e) => {
-            e.preventDefault();
-            const userMessage = messageInput.value.trim();
-            if (!userMessage || !db || !userId || isLoading) return;
-
-            let currentChatId = activeChatId;
-            const isNewChat = !currentChatId;
-            
-            updateLoadingState(true);
-            messageInput.value = '';
-            sendButton.disabled = true;
-
-            try {
-                if (isNewChat) {
-                    const newChatRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/chats`), { name: 'New Chat', createdAt: serverTimestamp() });
-                    currentChatId = newChatRef.id;
-                    setActiveChatId(currentChatId);
-                    
-                    const chatTitle = await getChatTitle(userMessage);
-                    await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/chats`, currentChatId), { name: chatTitle });
-                }
-
-                const messagesRef = collection(db, `artifacts/${appId}/users/${userId}/chats/${currentChatId}/messages`);
-                await addDoc(messagesRef, { text: userMessage, role: 'user', timestamp: serverTimestamp() });
-                
-                const chatHistory = messages.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
-                const aiResponse = await getGeminiResponse(userMessage, chatHistory);
-                
-                await addDoc(messagesRef, { text: aiResponse, role: 'model', timestamp: serverTimestamp() });
-
-            } catch (error) {
-                console.error("Error sending message:", error);
-                const messagesRef = collection(db, `artifacts/${appId}/users/${userId}/chats/${currentChatId}/messages`);
-                await addDoc(messagesRef, { text: "Something went wrong. Please try again.", role: 'model', timestamp: serverTimestamp() });
-            } finally {
-                updateLoadingState(false);
-            }
-        };
-
-        // --- Firestore Listeners ---
-        const listenForChats = () => {
-            unsubscribeChats(); 
-            const chatsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/chats`);
-            const q = query(chatsCollectionRef, orderBy('createdAt', 'desc'));
-            unsubscribeChats = onSnapshot(q, (snapshot) => {
-                chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderChats();
-            });
-        };
-
-        const listenForMessages = (chatId) => {
-            unsubscribeMessages();
-            if (!chatId) {
-                messages = [];
-                renderMessages();
-                return;
-            }
-            const messagesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/chats/${chatId}/messages`);
-            const q = query(messagesCollectionRef, orderBy('timestamp'));
-            unsubscribeMessages = onSnapshot(q, (snapshot) => {
-                messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderMessages();
-            });
-        };
-
-        const setActiveChatId = (id) => {
-            if (activeChatId === id) return;
-            activeChatId = id;
-            renderChats();
-            listenForMessages(id);
-        };
-        
-        // --- Gemini API Call ---
-        const getGeminiResponse = async (prompt, history) => {
-            // IMPORTANT: API key is handled by the environment. Do not hardcode it here.
-            const apiKey = "AIzaSyA6eRwusLfHTjBJRFQQHQTorhD2IpGwVlw"; 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            const payload = { contents: [...history, { role: "user", parts: [{ text: prompt }] }] };
-            try {
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-                const result = await response.json();
-                return result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't get a response.";
-            } catch (error) {
-                console.error("Error calling Gemini API:", error);
-                return "An error occurred while contacting the AI.";
-            }
-        };
-        
-        const getChatTitle = async (prompt) => {
-            const titlePrompt = `Generate a very short, 2-4 word title for a conversation that starts with this message: "${prompt}". Just return the title, nothing else.`;
-            return await getGeminiResponse(titlePrompt, []);
-        };
-
-        // --- Initialization ---
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
-             const firebaseConfig = {
-                apiKey: "AIzaSyAeoQusga7FK9IYPzzbYXzOinh0iVTZn0I",
-                authDomain: "triumind-store.firebaseapp.com",
-                projectId: "triumind-store",
-                storageBucket: "triumind-store.firebasestorage.app",
-                messagingSenderId: "1091612626687",
-                appId: "1:1091612626687:web:3fe91cc3d61d728e3f86ca",
-                measurementId: "G-JEZBMS38S0"
+            const techniciansList = document.getElementById('technicians-list');
+            const jobsList = document.getElementById('jobs-list');
+            const jobsTableBody = document.getElementById('jobs-table-body');
+            const techniciansCardGrid = document.getElementById('technicians-card-grid');
+            const scheduleContainer = document.getElementById('schedule-container');
+            const calendarDate = document.getElementById('calendar-date');
+            const calendarMonthYear = document.getElementById('calendar-month-year');
+            const pendingJobsEl = document.getElementById('pendingJobs');
+            const completedJobsEl = document.getElementById('completedJobs');
+            const totalTechsStatEl = document.getElementById('total-technicians-stat');
+            
+            const jobModal = document.getElementById('jobModal');
+            const createJobBtn = document.getElementById('createJobBtn');
+            const createJobBtn2 = document.getElementById('createJobBtn2');
+            const closeJobModalBtn = document.getElementById('closeJobModal');
+            const jobForm = document.getElementById('jobForm');
+
+            const techModal = document.getElementById('techModal');
+            const addTechnicianBtn = document.getElementById('addTechnicianBtn');
+            const closeTechModalBtn = document.getElementById('closeTechModal');
+            const techForm = document.getElementById('techForm');
+            
+            const manageTechModal = document.getElementById('manageTechModal');
+            const closeManageTechModalBtn = document.getElementById('closeManageTechModal');
+            const manageTechForm = document.getElementById('manageTechForm');
+
+            const scheduleJobModal = document.getElementById('scheduleJobModal');
+            const closeScheduleJobModalBtn = document.getElementById('closeScheduleJobModal');
+            const scheduleJobForm = document.getElementById('scheduleJobForm');
+
+            const sidebarNav = document.getElementById('sidebar-nav');
+            const navLinks = sidebarNav.querySelectorAll('.nav-link');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            let technicians = [
+                { id: 'T-12345', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', location: 'New York, NY', status: 'Available', capacity: 5 },
+                { id: 'T-67890', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', location: 'Los Angeles, CA', status: 'Offline', capacity: 8 },
+                { id: 'T-54321', name: 'Mike Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', location: 'Chicago, IL', status: 'Available', capacity: 6 },
+                { id: 'T-11223', name: 'Emily Williams', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026707d', location: 'Houston, TX', status: 'Available', capacity: 7 },
+                { id: 'T-44556', name: 'Chris Brown', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026708d', location: 'Phoenix, AZ', status: 'Offline', capacity: 5 },
+            ];
+
+            let jobs = [
+                { id: 'J-1024', customerName: 'Olivia Martin', address: '123 Maple St, Springfield', issue: 'Leaking faucet', phone: '555-1234', warrantyProvider: 'First American', planType: 'First Class Upgrade', dispatchPo: '621373372', scheduledTime: '08:00 AM', scheduledEndTime: '10:00 AM', status: 'scheduled', technicianId: 'T-12345' },
+                { id: 'J-1025', customerName: 'Liam Johnson', address: '456 Oak Ave, Metropolis', issue: 'No hot water', phone: '555-5678', warrantyProvider: 'Home Shield', planType: 'Basic', dispatchPo: '621373373', scheduledTime: 'TBD', scheduledEndTime: 'TBD', status: 'needs-scheduling', technicianId: null },
+                { id: 'J-1026', customerName: 'Noah Williams', address: '789 Pine Ln, Gotham', issue: 'Clogged drain', phone: '555-9012', warrantyProvider: 'First American', planType: 'Gold Plan', dispatchPo: '621373374', scheduledTime: '11:00 AM', scheduledEndTime: '01:00 PM', status: 'scheduled', technicianId: 'T-54321' },
+                { id: 'J-1027', customerName: 'Emma Brown', address: '101 Birch Rd, Star City', issue: 'AC unit not cooling', phone: '555-3456', warrantyProvider: 'Choice Home Warranty', planType: 'Premium', dispatchPo: '621373375', scheduledTime: 'TBD', scheduledEndTime: 'TBD', status: 'needs-scheduling', technicianId: null },
+                { id: 'J-1028', customerName: 'Ava Jones', address: '212 Cedar Blvd, Central City', issue: 'Furnace maintenance', phone: '555-7890', warrantyProvider: 'First American', planType: 'First Class Upgrade', dispatchPo: '621373376', scheduledTime: '02:30 PM', scheduledEndTime: '04:00 PM', status: 'scheduled', technicianId: 'T-67890' },
+                { id: 'J-1029', customerName: 'Test Customer', address: '321 Elm St, Anytown, USA', issue: 'Quote Visit', phone: '555-1122', warrantyProvider: 'N/A', planType: 'N/A', dispatchPo: '621373377', scheduledTime: '05:00 PM', scheduledEndTime: '05:30 PM', status: 'scheduled', technicianId: 'T-12345' },
+            ];
+
+            const renderTechniciansList = () => {
+                if (!techniciansList) return;
+                techniciansList.innerHTML = '';
+                technicians.filter(t => t.status === 'Available').slice(0, 3).forEach(tech => {
+                    const techElement = document.createElement('div');
+                    techElement.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+                    techElement.innerHTML = `<div class="flex items-center space-x-3"><img alt="${tech.name}" class="w-10 h-10 rounded-full" src="${tech.avatar}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/FFA500/000000?text=A';"><div><p class="font-semibold text-sm text-[var(--text-primary)]">${tech.name}</p><p class="text-xs text-[var(--text-tertiary)]">ID: ${tech.id}</p></div></div><div class="flex items-center space-x-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xs text-[var(--text-secondary)]">Online</span></div>`;
+                    techniciansList.appendChild(techElement);
+                });
+            };
+            
+            const renderTechniciansCards = () => {
+                if (!techniciansCardGrid) return;
+                techniciansCardGrid.innerHTML = '';
+                technicians.forEach(tech => {
+                    const isAvailable = tech.status === 'Available';
+                    const statusColor = isAvailable ? 'var(--status-available)' : 'var(--status-offline)';
+                    const card = document.createElement('div');
+                    card.className = 'card p-4 flex flex-col justify-between';
+                    card.innerHTML = `
+                        <div>
+                            <p class="text-lg font-bold text-[var(--text-primary)] mb-2">${tech.name}</p>
+                            <div class="flex items-center text-sm text-[var(--text-secondary)] mb-2">
+                                <span class="material-icons text-base mr-2">location_on</span>
+                                <span>${tech.location}</span>
+                            </div>
+                            <div class="flex items-center text-sm text-[var(--text-secondary)] mb-4">
+                                <span class="material-icons text-base mr-2">work_history</span>
+                                <span>Capacity: ${tech.capacity} jobs</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-start space-y-2">
+                             <div class="flex items-center">
+                                <div class="w-2.5 h-2.5 rounded-full mr-2" style="background-color: ${statusColor};"></div>
+                                <p class="text-sm font-medium" style="color: ${statusColor};">${tech.status}</p>
+                            </div>
+                            <button data-id="${tech.id}" class="manage-tech-btn w-full bg-[var(--bg-orange)]/20 text-[var(--text-orange)] py-1.5 px-4 rounded-md hover:bg-[var(--bg-orange)]/40 transition-colors text-sm font-medium">Manage</button>
+                        </div>
+                    `;
+                    techniciansCardGrid.appendChild(card);
+                });
             };
 
-            if (!firebaseConfig.apiKey) {
-                console.error("Firebase config is not set up.");
-                document.getElementById('main-content').innerHTML = `<div class="text-center text-red-500 p-8">Error: Firebase configuration is missing. Please add your project config to the script.</div>`;
-                loadingOverlay.classList.add('hidden');
-                return;
-            }
-
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        userIdDisplay.textContent = userId;
-                        messageInput.disabled = false;
-                        
-                        const prefDocRef = doc(db, `artifacts/${appId}/users/${userId}/preferences`, 'user_settings');
-                        onSnapshot(prefDocRef, (docSnap) => {
-                            theme = (docSnap.exists() && docSnap.data().theme) ? docSnap.data().theme : 'dark';
-                            renderTheme();
-                        });
-
-                        listenForChats();
-                        loadingOverlay.classList.add('hidden');
-                    } else {
-                         try {
-                            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                        } catch (error) {
-                            console.error("Error signing in:", error);
-                            loadingOverlay.innerText = "Error: Could not authenticate.";
-                        }
-                    }
+            const renderUpcomingJobs = () => {
+                if (!jobsList) return;
+                jobsList.innerHTML = '';
+                const upcoming = jobs.filter(job => job.status === 'needs-scheduling').slice(0, 3);
+                upcoming.forEach(job => {
+                    const jobElement = document.createElement('div');
+                    jobElement.className = 'p-3 bg-gray-50 rounded-lg';
+                    jobElement.innerHTML = `<p class="font-semibold text-sm text-[var(--text-primary)]">${job.issue}</p><p class="text-xs text-[var(--text-tertiary)]">${job.customerName} | ${job.address}</p>`;
+                    jobsList.appendChild(jobElement);
                 });
-            } catch(e) {
-                console.error("Error initializing Firebase:", e);
-                loadingOverlay.innerText = "Error: Could not initialize the application.";
-            }
+            };
 
-            // --- Event Listeners Setup ---
-            themeToggleBtn.addEventListener('click', handleThemeToggle);
-            newChatBtn.addEventListener('click', handleNewChat);
-            messageForm.addEventListener('submit', handleSendMessage);
-            messageInput.addEventListener('input', () => {
-                sendButton.disabled = isLoading || !messageInput.value.trim();
+            const renderJobsTable = () => {
+                if (!jobsTableBody) return;
+                jobsTableBody.innerHTML = '';
+                jobs.forEach(job => {
+                    const statusClass = `status-${job.status.replace(/ /g, '-')}`;
+                    const statusText = job.status.replace(/-/g, ' ');
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition-colors';
+                    row.innerHTML = `<td class="p-4 whitespace-nowrap text-gray-800">${job.customerName}</td><td class="p-4 whitespace-nowrap text-[var(--text-tertiary)]">${job.address}</td><td class="p-4 whitespace-nowrap text-[var(--text-tertiary)]">${job.issue}</td><td class="p-4 whitespace-nowrap text-[var(--text-tertiary)]">${job.phone}</td><td class="p-4 whitespace-nowrap"><span class="status-pill ${statusClass}">${statusText}</span></td><td class="p-4 whitespace-nowrap"><button data-id="${job.id}" class="view-job-btn bg-[var(--bg-orange)]/20 text-[var(--text-orange)] py-1 px-4 rounded-md hover:bg-[var(--bg-orange)]/40 transition-colors text-sm font-medium">View</button></td>`;
+                    jobsTableBody.appendChild(row);
+                });
+            };
+            
+            const renderSchedule = () => {
+                if (!scheduleContainer) return;
+                scheduleContainer.innerHTML = '';
+                const scheduledJobs = jobs.filter(job => job.status === 'scheduled' && job.technicianId);
+                const jobsByTech = scheduledJobs.reduce((acc, job) => {
+                    (acc[job.technicianId] = acc[job.technicianId] || []).push(job);
+                    return acc;
+                }, {});
+
+                for (const techId in jobsByTech) {
+                    const tech = technicians.find(t => t.id === techId);
+                    if (!tech) continue;
+
+                    const techScheduleCard = document.createElement('div');
+                    techScheduleCard.className = 'p-3 bg-gray-50 rounded-lg';
+                    
+                    let jobsHtml = '';
+                    jobsByTech[techId].forEach(job => {
+                        const startTimeParts = job.scheduledTime.split(' ');
+                        const endTimeParts = job.scheduledEndTime.split(' ');
+                        
+                        jobsHtml += `
+                            <div class="flex items-start space-x-4">
+                                <div class="flex flex-col items-center w-16 shrink-0">
+                                    <div class="text-center">
+                                        <p class="font-bold text-sm text-gray-800">${startTimeParts[0]}</p>
+                                        <p class="text-xs text-[var(--text-tertiary)]">${startTimeParts[1]}</p>
+                                    </div>
+                                    <div class="w-px h-3 bg-[var(--border-secondary)] my-1"></div>
+                                    <div class="text-center">
+                                        <p class="font-bold text-sm text-gray-800">${endTimeParts[0]}</p>
+                                        <p class="text-xs text-[var(--text-tertiary)]">${endTimeParts[1]}</p>
+                                    </div>
+                                </div>
+                                <div class="pt-0">
+                                    <p class="font-semibold text-sm text-gray-800">${job.issue}</p>
+                                    <p class="text-xs text-[var(--text-secondary)]">${job.address}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    techScheduleCard.innerHTML = `
+                        <div class="flex items-center space-x-3 mb-3 pb-3 border-b border-[var(--border-secondary)]">
+                            <img alt="${tech.name}" class="w-8 h-8 rounded-full" src="${tech.avatar}" onerror="this.onerror=null;this.src='https://placehold.co/32x32/FFA500/000000?text=A';">
+                            <div>
+                                <p class="font-bold text-base text-gray-800">${tech.name}</p>
+                                <p class="text-xs text-[var(--text-tertiary)]">${tech.id}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-4">${jobsHtml}</div>
+                    `;
+                    scheduleContainer.appendChild(techScheduleCard);
+                }
+            };
+
+            const updateStats = () => {
+                if (pendingJobsEl) pendingJobsEl.textContent = jobs.filter(j => j.status === 'needs-scheduling').length;
+                if (completedJobsEl) completedJobsEl.textContent = jobs.filter(j => j.status === 'scheduled').length;
+                if (totalTechsStatEl) totalTechsStatEl.textContent = technicians.length;
+            };
+
+            const setCalendarDate = () => {
+                if (!calendarDate || !calendarMonthYear) return;
+                const now = new Date();
+                calendarDate.textContent = now.getDate();
+                calendarMonthYear.textContent = `${now.toLocaleString('default', { month: 'long' })}, ${now.getFullYear()}`;
+            };
+
+            sidebarNav.addEventListener('click', (e) => {
+                const link = e.target.closest('.nav-link');
+                if (!link) return;
+                e.preventDefault();
+                const tabId = link.dataset.tab;
+                navLinks.forEach(navLink => {
+                    navLink.classList.remove('active');
+                    navLink.classList.add('text-gray-500', 'hover:text-[var(--text-orange)]', 'hover:bg-gray-100');
+                });
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                link.classList.add('active');
+                link.classList.remove('text-gray-500', 'hover:text-[var(--text-orange)]', 'hover:bg-gray-100');
+                const activeTab = document.getElementById(`${tabId}-tab`);
+                if (activeTab) activeTab.classList.add('active');
             });
-            chatListContainer.addEventListener('click', (e) => {
-                const chatItem = e.target.closest('.chat-item');
-                if (chatItem) {
-                    const chatId = chatItem.dataset.id;
-                    setActiveChatId(chatId);
+
+            const openJobModal = () => jobModal.style.display = 'block';
+            const closeJobModal = () => jobModal.style.display = 'none';
+            const openTechModal = () => techModal.style.display = 'block';
+            const closeTechModal = () => techModal.style.display = 'none';
+            const openManageTechModal = (tech) => {
+                document.getElementById('manageTechId').value = tech.id;
+                document.getElementById('manageTechName').value = tech.name;
+                document.getElementById('manageTechLocation').value = tech.location;
+                document.getElementById('manageTechCapacity').value = tech.capacity;
+                manageTechModal.style.display = 'block';
+            };
+            const closeManageTechModal = () => manageTechModal.style.display = 'none';
+            const openScheduleJobModal = (job) => {
+                document.getElementById('scheduleJobId').value = job.id;
+                document.getElementById('schedule-customer-name').textContent = job.customerName;
+                document.getElementById('schedule-address').textContent = job.address;
+                document.getElementById('schedule-issue').textContent = job.issue;
+                document.getElementById('schedule-warranty').textContent = job.warrantyProvider;
+                document.getElementById('schedule-plan').textContent = job.planType;
+                document.getElementById('schedule-dispatch').textContent = job.dispatchPo;
+                
+                scheduleJobModal.style.display = 'block';
+            };
+            const closeScheduleJobModal = () => scheduleJobModal.style.display = 'none';
+
+            if (createJobBtn) createJobBtn.onclick = openJobModal;
+            if (createJobBtn2) createJobBtn2.onclick = openJobModal;
+            if (closeJobModalBtn) closeJobModalBtn.onclick = closeJobModal;
+            
+            if (addTechnicianBtn) addTechnicianBtn.onclick = openTechModal;
+            if (closeTechModalBtn) closeTechModalBtn.onclick = closeTechModal;
+            
+            if (closeManageTechModalBtn) closeManageTechModalBtn.onclick = closeManageTechModal;
+            if (closeScheduleJobModalBtn) closeScheduleJobModalBtn.onclick = closeScheduleJobModal;
+
+            techniciansCardGrid.addEventListener('click', (e) => {
+                if (e.target.classList.contains('manage-tech-btn')) {
+                    const techId = e.target.dataset.id;
+                    const tech = technicians.find(t => t.id === techId);
+                    if (tech) openManageTechModal(tech);
+                }
+            });
+            
+            jobsTableBody.addEventListener('click', (e) => {
+                if (e.target.classList.contains('view-job-btn')) {
+                    const jobId = e.target.dataset.id;
+                    const job = jobs.find(j => j.id === jobId);
+                    if (job) openScheduleJobModal(job);
                 }
             });
 
-            renderTheme();
-            renderMessages(); // Initial render for the welcome screen
+            window.onclick = (event) => { 
+                if (event.target == jobModal) closeJobModal();
+                if (event.target == techModal) closeTechModal();
+                if (event.target == manageTechModal) closeManageTechModal();
+                if (event.target == scheduleJobModal) closeScheduleJobModal();
+            };
+            
+            if (jobForm) {
+                jobForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    jobs.unshift({ id: `J-${Math.floor(1000 + Math.random() * 9000)}`, customerName: jobForm.customerName.value, address: jobForm.jobLocation.value, issue: jobForm.jobIssue.value, phone: jobForm.customerPhone.value, scheduledTime: 'TBD', scheduledEndTime: 'TBD', status: 'needs-scheduling', technicianId: null, warrantyProvider: 'N/A', planType: 'N/A', dispatchPo: 'N/A' });
+                    renderUpcomingJobs();
+                    renderJobsTable();
+                    updateStats();
+                    closeJobModal();
+                    jobForm.reset();
+                });
+            }
+
+            if (techForm) {
+                techForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newId = `T-${Math.floor(10000 + Math.random() * 90000)}`;
+                    technicians.push({ id: newId, name: techForm.techName.value, location: techForm.techLocation.value, status: 'Offline', avatar: `https://i.pravatar.cc/150?u=${newId}`, capacity: 5 });
+                    renderTechniciansCards();
+                    renderTechniciansList();
+                    updateStats();
+                    closeTechModal();
+                    techForm.reset();
+                });
+            }
+            
+            if (manageTechForm) {
+                manageTechForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const techId = document.getElementById('manageTechId').value;
+                    const techIndex = technicians.findIndex(t => t.id === techId);
+                    if (techIndex > -1) {
+                        technicians[techIndex].location = document.getElementById('manageTechLocation').value;
+                        technicians[techIndex].capacity = parseInt(document.getElementById('manageTechCapacity').value, 10);
+                    }
+                    renderTechniciansCards();
+                    renderTechniciansList();
+                    closeManageTechModal();
+                });
+            }
+            
+            if (scheduleJobForm) {
+                scheduleJobForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const jobId = document.getElementById('scheduleJobId').value;
+                    const jobIndex = jobs.findIndex(j => j.id === jobId);
+                    if (jobIndex > -1) {
+                        const timeSlot = document.getElementById('scheduleTime').value;
+                        const [startTime, endTime] = timeSlot.split(' - ');
+                        jobs[jobIndex].status = 'scheduled';
+                        jobs[jobIndex].scheduledTime = startTime;
+                        jobs[jobIndex].scheduledEndTime = endTime;
+                    }
+                    renderAll();
+                    closeScheduleJobModal();
+                });
+            }
+            
+            function renderAll() {
+                renderTechniciansList();
+                renderTechniciansCards();
+                renderUpcomingJobs();
+                renderJobsTable();
+                renderSchedule();
+                updateStats();
+            }
+
+            renderAll();
+            setCalendarDate();
         });
     </script>
 </body>
