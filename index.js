@@ -75,8 +75,39 @@ exports.checkGmailAndProcess = async (req, res) => {
         res.status(200).send('Email check complete.');
 
     } catch (error) {
-        console.error('An error occurred:', error.message);
-        res.status(500).send(`An error occurred: ${error.message}`);
+        console.error('An error occurred:', error); // Log the full error for better debugging
+
+        // Check if the error is a 'Not Found' error, which might indicate a stale historyId.
+        // Google API errors often have a `code` property. gRPC's NOT_FOUND is 5.
+        // We also check the message just in case.
+        const isNotFoundError = error.code === 5 || (error.message && error.message.includes('NOT_FOUND'));
+
+        if (isNotFoundError) {
+            console.log('Caught a NOT_FOUND error. This might be a stale historyId. Attempting to reset.');
+
+            try {
+                const CONFIG_COLLECTION = 'function_config';
+                const CONFIG_DOC_ID = 'gmail_sync';
+                const configRef = firestore.collection(CONFIG_COLLECTION).doc(CONFIG_DOC_ID);
+
+                // Atomically delete the lastHistoryId field.
+                // The next function run will perform an initial sync.
+                await configRef.update({
+                    lastHistoryId: FieldValue.delete()
+                });
+
+                console.log('Successfully deleted lastHistoryId. The next run will re-initialize.');
+                // Respond with success to prevent the scheduler from retrying immediately with the same error.
+                res.status(200).send('Recovered from a NOT_FOUND error by resetting history. Please trigger again.');
+            } catch (resetError) {
+                console.error('CRITICAL: Failed to reset lastHistoryId after a NOT_FOUND error.', resetError);
+                // If resetting fails, send a 500 error.
+                res.status(500).send(`An error occurred, and recovery failed: ${resetError.message}`);
+            }
+        } else {
+            // For all other errors, behave as before.
+            res.status(500).send(`An error occurred: ${error.message}`);
+        }
     }
 };
 
