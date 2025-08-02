@@ -90,13 +90,12 @@ exports.checkGmailAndProcess = async (req, res) => {
                 const CONFIG_DOC_ID = 'gmail_sync';
                 const configRef = firestore.collection(CONFIG_COLLECTION).doc(CONFIG_DOC_ID);
 
-                // Atomically delete the lastHistoryId field.
-                // The next function run will perform an initial sync.
-                await configRef.update({
-                    lastHistoryId: FieldValue.delete()
-                });
+                // Overwrite with an empty document.
+                // This is safer than `update` as it works even if the doc doesn't exist.
+                // The next function run will see `lastHistoryId` is missing and will re-initialize.
+                await configRef.set({}, { merge: false });
 
-                console.log('Successfully deleted lastHistoryId. The next run will re-initialize.');
+                console.log('Successfully reset the config document. The next run will re-initialize.');
                 // Respond with success to prevent the scheduler from retrying immediately with the same error.
                 res.status(200).send('Recovered from a NOT_FOUND error by resetting history. Please trigger again.');
             } catch (resetError) {
