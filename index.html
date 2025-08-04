@@ -669,16 +669,27 @@
                 });
                 
                 const result = await response.json();
+
+                // Check for errors in the AI response
+                if (result.error) {
+                    console.error("AI API Error:", result.error.message);
+                    throw new Error(`AI API Error: ${result.error.message}`);
+                }
                 
                 if (result.candidates && result.candidates[0].content.parts[0].text) {
                     const text = result.candidates[0].content.parts[0].text;
                     // Clean the response to remove markdown and ensure it's valid JSON
-                    const cleanedJson = text.replace(/\\\`\\\`\\\`json/g, '').replace(/\\\`\\\`\\\`/g, '').trim();
-                    optimizedRoutes = JSON.parse(cleanedJson).optimizedRoutes;
-                    renderOptimizedRoutes(optimizedRoutes);
-                    approveRoutesSection.style.display = 'block';
+                    const cleanedJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                    try {
+                        optimizedRoutes = JSON.parse(cleanedJson).optimizedRoutes;
+                        renderOptimizedRoutes(optimizedRoutes);
+                        approveRoutesSection.style.display = 'block';
+                    } catch (e) {
+                        console.error("Failed to parse AI response JSON:", e);
+                        throw new Error("Invalid JSON format in AI response.");
+                    }
                 } else {
-                    // Handle cases where the response structure is unexpected
+                    // Handle other cases of unexpected structure
                     console.error("Unexpected AI response structure:", result);
                     throw new Error("Invalid response structure from AI.");
                 }
