@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Technician App</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        :root {
+            --brand-primary: #F97316;
+            --brand-secondary: #fff7ed;
+            --brand-background: #f8fafc;
+            --brand-text-primary: #1e293b;
+            --brand-text-secondary: #64748b;
+            --brand-border: #e2e8f0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[var(--brand-background)]">
+<div class="flex flex-col h-screen">
+<header class="bg-white shadow-sm">
+<div class="max-w-md mx-auto p-4 flex items-center justify-between">
+    <h1 id="welcomeMessage" class="text-xl font-bold text-[var(--brand-text-primary)]">My Jobs</h1>
+    <button id="logoutBtn" class="text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto">
+<div id="jobs-container" class="max-w-md mx-auto p-4 space-y-4">
+    <!-- Jobs will be loaded here dynamically -->
+    <p id="loading-message" class="text-center text-gray-500">Loading your route for today...</p>
+</div>
+</main>
+<footer class="bg-white border-t border-[var(--brand-border)]">
+<div class="max-w-md mx-auto p-4">
+<div class="flex items-center justify-between">
+<span class="font-semibold text-[var(--brand-text-primary)]">Status</span>
+<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-2 text-sm font-medium text-[var(--brand-primary)]">
+<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><path d="M144,16H112a8,8,0,0,0-8,8V46.34A64.2,64.2,0,0,0,59,96a64,64,0,0,0,64,64,8,8,0,0,0,8-8V128h24a8,8,0,0,0,8-8V24A8,8,0,0,0,144,16Zm-8,96H120V77.66a64.2,64.2,0,0,0,16,2.06Zm40-56H160V24h16Zm-24,80H40a8,8,0,0,0-6.63,12.56,95.53,95.53,0,0,0,32,32.22A96.34,96.34,0,0,0,96,224a96,96,0,0,0,96-96,8,8,0,0,0-8-8H152v24a8,8,0,0,0,8,8h56.55a8,8,0,0,0,7.1-4.42,104,104,0,0,0-188-46.72,8,8,0,1,0,14.69,6.08A88,88,0,0,1,208,128a87.35,87.35,0,0,1-1.22,14.73A8,8,0,0,0,208,152h8a8,8,0,0,0,0-16H200a72,72,0,0,0-72-72,8,8,0,0,0-8,8v16a8,8,0,0,0,8,8h8a48,48,0,0,1,48,48v.82a8,8,0,0,0,1.23,4.54,80,80,0,0,1-149.27,0A8,8,0,0,0,48,168a8,8,0,0,0-8,8,80,80,0,0,1,40.18-69.52,8,8,0,1,0-8.36-13.92A96,96,0,0,0,32,176v25.75a8,8,0,0,0,4.72,7.36A80,80,0,0,0,96,240a80.12,80.12,0,0,0,79.08-68.51,8,8,0,0,0-15-2.94A64.1,64.1,0,0,1,96,224a63.51,63.51,0,0,1-23.22-4.51,8,8,0,0,0-10.4,4.2A80.5,80.5,0,0,0,88,240c.85,0,1.69,0,2.54-.09a8,8,0,0,0,7.74-7.14,64,64,0,0,1-2.28-76.26,8,8,0,0,0,4-15.48A80.1,80.1,0,0,0,48,176a80,80,0,0,1,104-72v16a8,8,0,0,0,8,8h24a64,64,0,0,0-58.34-48H120a8,8,0,0,0-8,8v40a48,48,0,0,1-32,45.25V96A48,48,0,0,1,128,48a47.4,47.4,0,0,1,8,1V24h8Z"></path></svg>
+<span>Online</span>
+</div>
+<button class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[var(--brand-primary)] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-2" type="button">
+<span class="sr-only">Use setting</span>
+<span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+</div>
+</div>
+</footer>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Firebase Configuration ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCSi3xtGBZ1I5ZBRdckcM0C-FkOyp0SHDw",
+        authDomain: "polished-bounty-467515-r8.firebaseapp.com",
+        projectId: "polished-bounty-467515-r8",
+        storageBucket: "polished-bounty-467515-r8.appspot.com",
+        messagingSenderId: "769234521307",
+        appId: "1:769234521307:web:52266813e0bce07ea350fe"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- UI Elements ---
+    const jobsContainer = document.getElementById('jobs-container');
+    const loadingMessage = document.getElementById('loading-message');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // --- Authentication Check and Data Loading ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const user = JSON.parse(sessionStorage.getItem('user'));
+        if (!user || user.role !== 'technician') {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        welcomeMessage.textContent = `Welcome, ${user.name}!`;
+        loadTechnicianData(user.name);
+    });
+
+    // --- Logout ---
+    logoutBtn.addEventListener('click', () => {
+        sessionStorage.removeItem('user');
+        window.location.href = 'login.html';
+    });
+
+    // --- Load Technician Data ---
+    function loadTechnicianData(technicianName) {
+        const today = new Date().toISOString().split('T')[0];
+        const routeDocRef = doc(db, "optimized_routes", `${today}_${technicianName}`);
+
+        onSnapshot(routeDocRef, (docSnap) => {
+            loadingMessage.style.display = 'none';
+            jobsContainer.innerHTML = ''; // Clear previous jobs
+
+            if (docSnap.exists()) {
+                const routeData = docSnap.data();
+                const jobs = routeData.optimizedRoute || [];
+                
+                if (jobs.length === 0) {
+                    jobsContainer.innerHTML = '<p class="text-center text-gray-500">No jobs assigned for you today.</p>';
+                    return;
+                }
+
+                jobs.forEach((job, index) => {
+                    const jobCard = `
+                        <div class="bg-white rounded-lg shadow-sm p-4">
+                            <div class="flex items-start space-x-4">
+                                <div class="bg-[var(--brand-secondary)] text-[var(--brand-primary)] rounded-full p-3 mt-1">
+                                    <span class="font-bold text-lg">${index + 1}</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="font-semibold text-[var(--brand-text-primary)]">${job.issue}</p>
+                                            <p class="text-sm text-[var(--brand-text-secondary)]">${job.address}</p>
+                                        </div>
+                                        <div class="text-[var(--brand-text-secondary)]">
+                                            <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M98.83,182.83a8,8,0,0,1,0-11.32L158.66,112,98.83,52.17a8,8,0,0,1,11.31-11.32l64,64a8,8,0,0,1,0,11.32l-64,64A8,8,0,0,1,98.83,182.83Z"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 pt-2 border-t border-[var(--brand-border)]">
+                                        <div class="flex items-center text-sm text-[var(--brand-text-secondary)] space-x-4">
+                                            <div class="flex items-center space-x-1">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><path d="M224,48H32A16,16,0,0,0,16,64V200a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM208,184H48V80h16v8a8,8,0,0,0,16,0V80h80v8a8,8,0,0,0,16,0V80h16v24H152a8,8,0,0,0,0,16h72V64H32v16H80a8,8,0,0,0,0-16H32V64H224v48H184a8,8,0,0,0,0,16h40v56Z"></path></svg>
+                                                <span>Job ID: ${job.jobId.substring(0, 8)}...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    jobsContainer.innerHTML += jobCard;
+                });
+
+            } else {
+                jobsContainer.innerHTML = '<p class="text-center text-red-500">Could not find a route for you today. Please contact dispatch.</p>';
+                console.log("No such document!");
+            }
+        }, (error) => {
+            console.log("Error getting document:", error);
+            jobsContainer.innerHTML = '<p class="text-center text-red-500">Error loading your route. Please refresh the page.</p>';
+        });
+    }
+
+</script>
+
+</body></html>
