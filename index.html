@@ -63,14 +63,14 @@
         .status-pill { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
         .status-scheduled { background-color: #16a34a; color: #ffffff; }
         .status-dispatched { background-color: #3b82f6; color: #ffffff; }
-        .status-needs-scheduling, .status-New { background-color: #ca8a04; color: #ffffff; }
-        .status-Completed { background-color: #0284c7; color: #ffffff; }
+        .status-needs-scheduling, .status-new { background-color: #ca8a04; color: #ffffff; }
+        .status-completed { background-color: #0284c7; color: #ffffff; }
 
     </style>
 </head>
 
 <body class="flex flex-col min-h-screen">
-    <!-- Tailwind JIT Watcher: status-dispatched -->
+    <!-- Tailwind JIT Watcher: status-dispatched status-new -->
     <div class="flex flex-1 h-screen">
         <!-- Sidebar -->
         <aside class="sidebar bg-[var(--bg-secondary)] flex flex-col items-center py-6 border-r border-[var(--border-secondary)]">
@@ -328,7 +328,7 @@
         const renderUpcomingJobs = () => {
             if (!jobsList) return;
             jobsList.innerHTML = '';
-            const upcoming = jobs.filter(job => job.status === 'needs-scheduling').slice(0, 3);
+            const upcoming = jobs.filter(job => job.status === 'needs-scheduling' || job.status === 'New').slice(0, 3);
              if (upcoming.length === 0) {
                 jobsList.innerHTML = `<p class="text-gray-400">No upcoming jobs.</p>`;
                 return;
