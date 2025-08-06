@@ -567,14 +567,17 @@
 
         // Helper function to simulate getting coordinates from an address string
         function getCoordsFromAddress(address) {
-            let hash = 0;
+            let hash1 = 0;
+            let hash2 = 0;
             for (let i = 0; i < address.length; i++) {
                 const char = address.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash |= 0; 
+                hash1 = (hash1 << 5) - hash1 + char;
+                hash1 |= 0; 
+                hash2 = (hash2 << 5) + hash2 + char; 
+                hash2 |= 0;
             }
-            const lat = 34.0522 + (hash % 1000) / 10000.0;
-            const lon = -118.2437 + (hash % 10000) / 100000.0;
+            const lat = 34.0522 + (hash1 % 9000) / 100000.0;
+            const lon = -118.2437 + (hash2 % 9000) / 100000.0;
             return { lat, lon };
         }
 
