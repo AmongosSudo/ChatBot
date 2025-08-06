@@ -70,7 +70,7 @@
 </head>
 
 <body class="flex flex-col min-h-screen">
-    <!-- Tailwind JIT Watcher: status-dispatched -->
+    <!-- Tailwind JIT Watcher: status-dispatched status-needs-scheduling -->
     <div class="flex flex-1 h-screen">
         <!-- Sidebar -->
         <aside class="sidebar bg-[var(--bg-secondary)] flex flex-col items-center py-6 border-r border-[var(--border-secondary)]">
@@ -468,13 +468,17 @@
             onSnapshot(collection(db, "service_calls"), (snapshot) => {
                 jobs = snapshot.docs.map(doc => {
                     const data = doc.data();
+                    let status = data.status || 'needs-scheduling';
+                    if (status === 'New') {
+                        status = 'needs-scheduling';
+                    }
                     return {
                         id: doc.id,
                         customerName: data.customerName,
                         address: data.customerAddress,
                         issue: data.jobDescription,
                         phone: data.customerPhone,
-                        status: data.status || 'needs-scheduling',
+                        status: status,
                         technicianId: data.technicianId || null,
                         scheduledDate: data.scheduledDate || null,
                         scheduledTime: data.scheduledTime || 'TBD',
