@@ -70,6 +70,7 @@
 </head>
 
 <body class="flex flex-col min-h-screen">
+    <!-- Tailwind JIT Watcher: status-dispatched -->
     <div class="flex flex-1 h-screen">
         <!-- Sidebar -->
         <aside class="sidebar bg-[var(--bg-secondary)] flex flex-col items-center py-6 border-r border-[var(--border-secondary)]">
@@ -348,7 +349,7 @@
                 return;
             }
             jobs.forEach(job => {
-                const statusClass = `status-${job.status.replace(/ /g, '-')}`;
+                const statusClass = `status-${job.status.toLowerCase().replace(/ /g, '-')}`;
                 const statusText = job.status.replace(/-/g, ' ');
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50 transition-colors';
