@@ -21,49 +21,116 @@
             min-height: max(884px, 100dvh);
         }
     </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
   </head>
 <body class="bg-[var(--brand-background)]">
-<div class="flex flex-col h-screen">
-<header class="bg-white shadow-sm">
-<div class="max-w-md mx-auto p-4 flex items-center justify-between">
-    <h1 id="welcomeMessage" class="text-xl font-bold text-[var(--brand-text-primary)]">My Jobs</h1>
-    <button id="logoutBtn" class="text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
+
+<!-- Main Jobs List View -->
+<div id="jobs-list-view" class="flex flex-col h-screen">
+    <header class="bg-white shadow-sm">
+        <div class="max-w-md mx-auto p-4 flex items-center justify-between">
+            <h1 id="welcomeMessage" class="text-xl font-bold text-[var(--brand-text-primary)]">My Jobs</h1>
+            <button id="logoutBtn" class="text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
+        </div>
+    </header>
+    <main class="flex-1 overflow-y-auto">
+        <div id="jobs-container" class="max-w-md mx-auto p-4 space-y-4">
+            <!-- Jobs will be loaded here dynamically -->
+            <p id="loading-message" class="text-center text-gray-500">Loading your route for today...</p>
+        </div>
+    </main>
+    <footer class="bg-white border-t border-[var(--brand-border)]">
+        <div class="max-w-md mx-auto p-4">
+            <div class="flex items-center justify-between">
+                <span class="font-semibold text-[var(--brand-text-primary)]">Status</span>
+                <div class="flex items-center space-x-2">
+                    <div id="status-text" class="flex items-center space-x-2 text-sm font-medium text-[var(--brand-primary)]">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><path d="M144,16H112a8,8,0,0,0-8,8V46.34A64.2,64.2,0,0,0,59,96a64,64,0,0,0,64,64,8,8,0,0,0,8-8V128h24a8,8,0,0,0,8-8V24A8,8,0,0,0,144,16Zm-8,96H120V77.66a64.2,64.2,0,0,0,16,2.06Zm40-56H160V24h16Zm-24,80H40a8,8,0,0,0-6.63,12.56,95.53,95.53,0,0,0,32,32.22A96.34,96.34,0,0,0,96,224a96,96,0,0,0,96-96,8,8,0,0,0-8-8H152v24a8,8,0,0,0,8,8h56.55a8,8,0,0,0,7.1-4.42,104,104,0,0,0-188-46.72,8,8,0,1,0,14.69,6.08A88,88,0,0,1,208,128a87.35,87.35,0,0,1-1.22,14.73A8,8,0,0,0,208,152h8a8,8,0,0,0,0-16H200a72,72,0,0,0-72-72,8,8,0,0,0-8,8v16a8,8,0,0,0,8,8h8a48,48,0,0,1,48,48v.82a8,8,0,0,0,1.23,4.54,80,80,0,0,1-149.27,0A8,8,0,0,0,48,168a8,8,0,0,0-8,8,80,80,0,0,1,40.18-69.52,8,8,0,1,0-8.36-13.92A96,96,0,0,0,32,176v25.75a8,8,0,0,0,4.72,7.36A80,80,0,0,0,96,240a80.12,80.12,0,0,0,79.08-68.51,8,8,0,0,0-15-2.94A64.1,64.1,0,0,1,96,224a63.51,63.51,0,0,1-23.22-4.51,8,8,0,0,0-10.4,4.2A80.5,80.5,0,0,0,88,240c.85,0,1.69,0,2.54-.09a8,8,0,0,0,7.74-7.14,64,64,0,0,1-2.28-76.26,8,8,0,0,0,4-15.48A80.1,80.1,0,0,0,48,176a80,80,0,0,1,104-72v16a8,8,0,0,0,8,8h24a64,64,0,0,0-58.34-48H120a8,8,0,0,0-8,8v40a48,48,0,0,1-32,45.25V96A48,48,0,0,1,128,48a47.4,47.4,0,0,1,8,1V24h8Z"></path></svg>
+                        <span>Online</span>
+                    </div>
+                    <button id="status-toggle" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[var(--brand-primary)] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-2" type="button" aria-pressed="true">
+                        <span class="sr-only">Use setting</span>
+                        <span id="status-toggle-handle" aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </footer>
 </div>
-</header>
-<main class="flex-1 overflow-y-auto">
-<div id="jobs-container" class="max-w-md mx-auto p-4 space-y-4">
-    <!-- Jobs will be loaded here dynamically -->
-    <p id="loading-message" class="text-center text-gray-500">Loading your route for today...</p>
+
+<!-- Job Detail View (Initially Hidden) -->
+<div id="job-detail-view" class="flex h-screen flex-col bg-gray-50" style="display: none;">
+    <header class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+        <button id="back-to-list-btn" class="text-gray-600">
+            <svg class="h-6 w-6" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+        <h1 class="text-lg font-semibold text-gray-900">Task Details</h1>
+        <div class="w-6"></div>
+    </header>
+    <main class="flex-1 overflow-y-auto p-6">
+        <div class="space-y-6">
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <h2 class="text-xs font-medium uppercase text-gray-500">Location</h2>
+                <div class="mt-3 flex items-start gap-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                        <svg class="h-5 w-5" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </div>
+                    <div>
+                        <p id="detail-address" class="font-medium text-gray-800">123 Main St, Anytown, USA</p>
+                        <p class="text-sm text-gray-500">Customer Address</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <h2 class="text-xs font-medium uppercase text-gray-500">Contact</h2>
+                <div class="mt-3 flex items-start gap-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                        <svg class="h-5 w-5" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    </div>
+                    <div>
+                        <p id="detail-phone" class="font-medium text-gray-800">+1 (555) 123-4567</p>
+                        <p class="text-sm text-gray-500">Phone Number</p>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <h2 class="text-xs font-medium uppercase text-gray-500">Customer</h2>
+                    <div class="mt-3 flex items-center gap-3">
+                        <img id="detail-customer-avatar" alt="Customer Avatar" class="h-10 w-10 rounded-full object-cover" src="https://placehold.co/40x40/FFA500/FFFFFF?text=C"/>
+                        <p id="detail-customer-name" class="font-medium text-gray-800">Sarah Johnson</p>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <h2 class="text-xs font-medium uppercase text-gray-500">Warranty</h2>
+                    <div class="mt-3 flex items-center gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                            <svg class="h-5 w-5" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <p id="detail-warranty" class="font-medium text-gray-800">Extended Warranty Inc.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <h2 class="text-xs font-medium uppercase text-gray-500">Reported Issue</h2>
+                <p id="detail-issue-title" class="mt-3 text-lg font-bold text-gray-900">Dishwasher not draining.</p>
+                <p id="detail-issue-desc" class="mt-1 text-gray-600">Customer states the dishwasher runs through the cycle but leaves water at the bottom. Please investigate and repair.</p>
+            </div>
+        </div>
+    </main>
+    <footer class="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-4">
+        <button id="complete-job-btn" class="w-full rounded-full bg-orange-500 px-5 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+          Completed!
+        </button>
+    </footer>
 </div>
-</main>
-<footer class="bg-white border-t border-[var(--brand-border)]">
-<div class="max-w-md mx-auto p-4">
-<div class="flex items-center justify-between">
-<span class="font-semibold text-[var(--brand-text-primary)]">Status</span>
-<div class="flex items-center space-x-2">
-<div class="flex items-center space-x-2 text-sm font-medium text-[var(--brand-primary)]">
-<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><path d="M144,16H112a8,8,0,0,0-8,8V46.34A64.2,64.2,0,0,0,59,96a64,64,0,0,0,64,64,8,8,0,0,0,8-8V128h24a8,8,0,0,0,8-8V24A8,8,0,0,0,144,16Zm-8,96H120V77.66a64.2,64.2,0,0,0,16,2.06Zm40-56H160V24h16Zm-24,80H40a8,8,0,0,0-6.63,12.56,95.53,95.53,0,0,0,32,32.22A96.34,96.34,0,0,0,96,224a96,96,0,0,0,96-96,8,8,0,0,0-8-8H152v24a8,8,0,0,0,8,8h56.55a8,8,0,0,0,7.1-4.42,104,104,0,0,0-188-46.72,8,8,0,1,0,14.69,6.08A88,88,0,0,1,208,128a87.35,87.35,0,0,1-1.22,14.73A8,8,0,0,0,208,152h8a8,8,0,0,0,0-16H200a72,72,0,0,0-72-72,8,8,0,0,0-8,8v16a8,8,0,0,0,8,8h8a48,48,0,0,1,48,48v.82a8,8,0,0,0,1.23,4.54,80,80,0,0,1-149.27,0A8,8,0,0,0,48,168a8,8,0,0,0-8,8,80,80,0,0,1,40.18-69.52,8,8,0,1,0-8.36-13.92A96,96,0,0,0,32,176v25.75a8,8,0,0,0,4.72,7.36A80,80,0,0,0,96,240a80.12,80.12,0,0,0,79.08-68.51,8,8,0,0,0-15-2.94A64.1,64.1,0,0,1,96,224a63.51,63.51,0,0,1-23.22-4.51,8,8,0,0,0-10.4,4.2A80.5,80.5,0,0,0,88,240c.85,0,1.69,0,2.54-.09a8,8,0,0,0,7.74-7.14,64,64,0,0,1-2.28-76.26,8,8,0,0,0,4-15.48A80.1,80.1,0,0,0,48,176a80,80,0,0,1,104-72v16a8,8,0,0,0,8,8h24a64,64,0,0,0-58.34-48H120a8,8,0,0,0-8,8v40a48,48,0,0,1-32,45.25V96A48,48,0,0,1,128,48a47.4,47.4,0,0,1,8,1V24h8Z"></path></svg>
-<span>Online</span>
-</div>
-<button class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[var(--brand-primary)] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-2" type="button">
-<span class="sr-only">Use setting</span>
-<span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-</button>
-</div>
-</div>
-</div>
-</footer>
-</div>
+
 
 <!-- Firebase SDK -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Firebase Configuration ---
     const firebaseConfig = {
@@ -80,13 +147,27 @@
     const db = getFirestore(app);
 
     // --- UI Elements ---
+    const jobsListView = document.getElementById('jobs-list-view');
+    const jobDetailView = document.getElementById('job-detail-view');
     const jobsContainer = document.getElementById('jobs-container');
     const loadingMessage = document.getElementById('loading-message');
     const welcomeMessage = document.getElementById('welcomeMessage');
     const logoutBtn = document.getElementById('logoutBtn');
+    const backToListBtn = document.getElementById('back-to-list-btn');
+    const completeJobBtn = document.getElementById('complete-job-btn');
+    const statusToggle = document.getElementById('status-toggle');
+    const statusToggleHandle = document.getElementById('status-toggle-handle');
+    const statusText = document.getElementById('status-text').querySelector('span');
 
-    // --- Authentication Check and Data Loading ---
-    document.addEventListener('DOMContentLoaded', () => {
+
+    // --- App State ---
+    let currentJobId = null;
+    let technicianDocId = null;
+    let technicianUnsubscribe = null;
+
+
+    // --- Authentication & Initialization ---
+    document.addEventListener('DOMContentLoaded', async () => {
         const user = JSON.parse(sessionStorage.getItem('user'));
         if (!user || user.role !== 'technician') {
             window.location.href = 'login.html';
@@ -94,38 +175,166 @@
         }
 
         welcomeMessage.textContent = `Welcome, ${user.name}!`;
-        loadTechnicianData(user.name);
+        
+        await initializeTechnician(user.name);
+        loadTechnicianRoute(user.name);
     });
 
-    // --- Logout ---
+    // --- Find Technician and Setup Status Listener ---
+    async function initializeTechnician(technicianName) {
+        const techQuery = query(collection(db, "technicians"), where("name", "==", technicianName));
+        const querySnapshot = await getDocs(techQuery);
+
+        if (!querySnapshot.empty) {
+            const techDoc = querySnapshot.docs[0];
+            technicianDocId = techDoc.id;
+            
+            // Listen for real-time status updates
+            const techDocRef = doc(db, "technicians", technicianDocId);
+            technicianUnsubscribe = onSnapshot(techDocRef, (doc) => {
+                if (doc.exists()) {
+                    const techData = doc.data();
+                    updateStatusUI(techData.status);
+                }
+            });
+        } else {
+            console.error("Could not find technician document for:", technicianName);
+        }
+    }
+
+    // --- UI Update Functions ---
+    function updateStatusUI(status) {
+        const isOnline = status === 'Available';
+        statusText.textContent = isOnline ? 'Online' : 'Offline';
+        statusToggle.setAttribute('aria-pressed', isOnline);
+        
+        if (isOnline) {
+            statusToggle.classList.add('bg-[var(--brand-primary)]');
+            statusToggle.classList.remove('bg-gray-400');
+            statusToggleHandle.classList.add('translate-x-5');
+            statusToggleHandle.classList.remove('translate-x-0');
+        } else {
+            statusToggle.classList.remove('bg-[var(--brand-primary)]');
+            statusToggle.classList.add('bg-gray-400');
+            statusToggleHandle.classList.remove('translate-x-5');
+            statusToggleHandle.classList.add('translate-x-0');
+        }
+    }
+
+    // --- Navigation ---
+    function showJobsList() {
+        jobsListView.style.display = 'flex';
+        jobDetailView.style.display = 'none';
+        currentJobId = null;
+    }
+
+    async function showJobDetails(jobId) {
+        currentJobId = jobId;
+        const jobRef = doc(db, "service_calls", jobId);
+        const jobSnap = await getDoc(jobRef);
+
+        if (jobSnap.exists()) {
+            const jobData = jobSnap.data();
+            document.getElementById('detail-address').textContent = jobData.customerAddress || 'N/A';
+            document.getElementById('detail-phone').textContent = jobData.customerPhone || 'N/A';
+            document.getElementById('detail-customer-name').textContent = jobData.customerName || 'N/A';
+            document.getElementById('detail-customer-avatar').src = `https://placehold.co/40x40/FFA500/FFFFFF?text=${(jobData.customerName || 'C').charAt(0)}`;
+            document.getElementById('detail-warranty').textContent = jobData.warrantyProvider || 'N/A';
+            document.getElementById('detail-issue-title').textContent = jobData.jobDescription || 'No issue reported';
+            document.getElementById('detail-issue-desc').textContent = `Please investigate and repair. Dispatch/PO: ${jobData.dispatchOrPoNumber || 'N/A'}, Plan: ${jobData.planType || 'N/A'}`;
+
+            jobsListView.style.display = 'none';
+            jobDetailView.style.display = 'flex';
+        } else {
+            console.error("Job details not found for ID:", jobId);
+        }
+    }
+
+    // --- Event Listeners ---
     logoutBtn.addEventListener('click', () => {
+        if (technicianUnsubscribe) {
+            technicianUnsubscribe(); // Detach listener on logout
+        }
         sessionStorage.removeItem('user');
         window.location.href = 'login.html';
     });
 
-    // --- Load Technician Data ---
-    function loadTechnicianData(technicianName) {
+    backToListBtn.addEventListener('click', showJobsList);
+
+    statusToggle.addEventListener('click', async () => {
+        if (!technicianDocId) {
+            console.error("Technician ID not found, cannot update status.");
+            return;
+        }
+        const techDocRef = doc(db, "technicians", technicianDocId);
+        const isPressed = statusToggle.getAttribute('aria-pressed') === 'true';
+        const newStatus = isPressed ? 'Offline' : 'Available';
+
+        try {
+            await updateDoc(techDocRef, { status: newStatus });
+            // The onSnapshot listener will handle the UI update automatically.
+        } catch (error) {
+            console.error("Error updating status:", error);
+        }
+    });
+    
+    completeJobBtn.addEventListener('click', async () => {
+        if (!currentJobId) return;
+
+        const user = JSON.parse(sessionStorage.getItem('user'));
+        if (!user || !user.name) {
+            console.error("User not found in session storage");
+            return;
+        }
+
+        const jobRef = doc(db, "service_calls", currentJobId);
+        const today = new Date().toISOString().split('T')[0];
+        const routeDocRef = doc(db, "optimized_routes", `${today}_${user.name}`);
+
+        try {
+            await updateDoc(jobRef, { status: "Completed" });
+            const routeSnap = await getDoc(routeDocRef);
+            if (routeSnap.exists()) {
+                const routeData = routeSnap.data();
+                const updatedJobs = (routeData.optimizedRoute || []).filter(job => job.jobId !== currentJobId);
+                await updateDoc(routeDocRef, { optimizedRoute: updatedJobs });
+            }
+            showJobsList();
+        } catch (error) {
+            console.error("Error completing job: ", error);
+        }
+    });
+
+    jobsContainer.addEventListener('click', (e) => {
+        const jobCard = e.target.closest('.job-card');
+        if (jobCard) {
+            const jobId = jobCard.dataset.jobId;
+            if (jobId) {
+                showJobDetails(jobId);
+            }
+        }
+    });
+
+    // --- Load Technician Route from Firestore ---
+    function loadTechnicianRoute(technicianName) {
         const today = new Date().toISOString().split('T')[0];
         const routeDocRef = doc(db, "optimized_routes", `${today}_${technicianName}`);
 
         onSnapshot(routeDocRef, (docSnap) => {
             loadingMessage.style.display = 'none';
-            jobsContainer.innerHTML = ''; // Clear previous jobs
+            jobsContainer.innerHTML = ''; 
 
             if (docSnap.exists()) {
-                const routeData = docSnap.data();
-                const jobs = routeData.optimizedRoute || [];
-                
+                const jobs = docSnap.data().optimizedRoute || [];
                 if (jobs.length === 0) {
                     jobsContainer.innerHTML = '<p class="text-center text-gray-500">No jobs assigned for you today.</p>';
                     return;
                 }
-
                 jobs.forEach((job, index) => {
                     const jobCard = `
-                        <div class="bg-white rounded-lg shadow-sm p-4">
+                        <div class="bg-white rounded-lg shadow-sm p-4 job-card cursor-pointer hover:shadow-md transition-shadow" data-job-id="${job.jobId}">
                             <div class="flex items-start space-x-4">
-                                <div class="bg-[var(--brand-secondary)] text-[var(--brand-primary)] rounded-full p-3 mt-1">
+                                <div class="bg-[var(--brand-secondary)] text-[var(--brand-primary)] rounded-full flex-shrink-0 w-10 h-10 flex items-center justify-center mt-1">
                                     <span class="font-bold text-lg">${index + 1}</span>
                                 </div>
                                 <div class="flex-1">
@@ -144,7 +353,7 @@
                                         <div class="flex items-center text-sm text-[var(--brand-text-secondary)] space-x-4">
                                             <div class="flex items-center space-x-1">
                                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><path d="M224,48H32A16,16,0,0,0,16,64V200a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM208,184H48V80h16v8a8,8,0,0,0,16,0V80h80v8a8,8,0,0,0,16,0V80h16v24H152a8,8,0,0,0,0,16h72V64H32v16H80a8,8,0,0,0,0-16H32V64H224v48H184a8,8,0,0,0,0,16h40v56Z"></path></svg>
-                                                <span>Job ID: ${job.jobId.substring(0, 8)}...</span>
+                                                <span>Job ID: ${job.jobId ? job.jobId.substring(0, 8) : 'N/A'}...</span>
                                             </div>
                                         </div>
                                     </div>
@@ -154,10 +363,8 @@
                     `;
                     jobsContainer.innerHTML += jobCard;
                 });
-
             } else {
                 jobsContainer.innerHTML = '<p class="text-center text-red-500">Could not find a route for you today. Please contact dispatch.</p>';
-                console.log("No such document!");
             }
         }, (error) => {
             console.log("Error getting document:", error);
