@@ -63,14 +63,14 @@
         .status-pill { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
         .status-scheduled { background-color: #16a34a; color: #ffffff; }
         .status-dispatched { background-color: #3b82f6; color: #ffffff; }
-        .status-needs-scheduling { background-color: #ca8a04; color: #ffffff; }
+        .status-needs-scheduling, .status-New { background-color: #ca8a04; color: #ffffff; }
         .status-completed { background-color: #0284c7; color: #ffffff; }
 
     </style>
 </head>
 
 <body class="flex flex-col min-h-screen">
-    <!-- Tailwind JIT Watcher: status-dispatched status-needs-scheduling -->
+    <!-- Tailwind JIT Watcher: status-dispatched -->
     <div class="flex flex-1 h-screen">
         <!-- Sidebar -->
         <aside class="sidebar bg-[var(--bg-secondary)] flex flex-col items-center py-6 border-r border-[var(--border-secondary)]">
@@ -328,7 +328,7 @@
         const renderUpcomingJobs = () => {
             if (!jobsList) return;
             jobsList.innerHTML = '';
-            const upcoming = jobs.filter(job => job.status === 'needs-scheduling').slice(0, 3);
+            const upcoming = jobs.filter(job => job.status === 'needs-scheduling' || job.status === 'New').slice(0, 3);
              if (upcoming.length === 0) {
                 jobsList.innerHTML = `<p class="text-gray-400">No upcoming jobs.</p>`;
                 return;
@@ -349,7 +349,7 @@
                 return;
             }
             jobs.forEach(job => {
-                const statusClass = `status-${job.status.toLowerCase().replace(/ /g, '-')}`;
+                const statusClass = `status-${job.status.replace(/ /g, '-')}`;
                 const statusText = job.status.replace(/-/g, ' ');
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50 transition-colors';
@@ -359,7 +359,7 @@
         };
         
         const updateStats = () => {
-            if (pendingJobsEl) pendingJobsEl.textContent = jobs.filter(j => j.status === 'needs-scheduling').length;
+            if (pendingJobsEl) pendingJobsEl.textContent = jobs.filter(j => j.status === 'needs-scheduling' || j.status === 'New').length;
             if (completedJobsEl) completedJobsEl.textContent = jobs.filter(j => j.status === 'scheduled' || j.status === 'dispatched').length;
             if (totalTechsStatEl) totalTechsStatEl.textContent = technicians.length;
         };
@@ -468,17 +468,13 @@
             onSnapshot(collection(db, "service_calls"), (snapshot) => {
                 jobs = snapshot.docs.map(doc => {
                     const data = doc.data();
-                    let status = data.status || 'needs-scheduling';
-                    if (status === 'New') {
-                        status = 'needs-scheduling';
-                    }
                     return {
                         id: doc.id,
                         customerName: data.customerName,
                         address: data.customerAddress,
                         issue: data.jobDescription,
                         phone: data.customerPhone,
-                        status: status,
+                        status: data.status || 'New',
                         technicianId: data.technicianId || null,
                         scheduledDate: data.scheduledDate || null,
                         scheduledTime: data.scheduledTime || 'TBD',
@@ -505,7 +501,7 @@
                     customerAddress: jobForm.jobLocation.value,
                     jobDescription: jobForm.jobIssue.value,
                     customerPhone: jobForm.customerPhone.value,
-                    status: 'needs-scheduling',
+                    status: 'New',
                     receivedAt: serverTimestamp()
                 });
                 jobForm.reset();
