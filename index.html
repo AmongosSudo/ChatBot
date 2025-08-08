@@ -62,12 +62,15 @@
         
         .status-pill { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
         .status-scheduled { background-color: #16a34a; color: #ffffff; }
-        .status-needs-scheduling, .status-New { background-color: #ca8a04; color: #ffffff; }
+        .status-dispatched { background-color: #3b82f6; color: #ffffff; }
+        .status-needs-scheduling { background-color: #ca8a04; color: #ffffff; }
+        .status-completed { background-color: #0284c7; color: #ffffff; }
 
     </style>
 </head>
 
 <body class="flex flex-col min-h-screen">
+    <!-- Tailwind JIT Watcher: status-dispatched status-needs-scheduling -->
     <div class="flex flex-1 h-screen">
         <!-- Sidebar -->
         <aside class="sidebar bg-[var(--bg-secondary)] flex flex-col items-center py-6 border-r border-[var(--border-secondary)]">
@@ -81,9 +84,9 @@
             <div class="w-full px-4">
                 <div class="w-full flex items-center p-3">
                     <div class="w-10 h-10 rounded-full bg-[var(--bg-orange)] flex items-center justify-center text-white font-bold flex-shrink-0">A</div>
-                    <span class="nav-link-title ml-4">Admin</span>
+                    <span id="adminName" class="nav-link-title ml-4">Admin</span>
                 </div>
-                 <button class="w-full flex items-center p-3 text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors mt-2">
+                 <button id="logoutBtn" class="w-full flex items-center p-3 text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors mt-2">
                     <span class="material-icons">logout</span>
                     <span class="logout-text ml-4">Logout</span>
                 </button>
@@ -162,13 +165,13 @@
                 <div class="flex justify-between items-center mb-6">
                     <div>
                         <h1 class="text-xl font-bold">Route Optimization</h1>
-                        <p class="text-xs text-[var(--text-secondary)]">Generate and approve optimized routes for today's jobs.</p>
+                        <p class="text-xs text-[var(--text-secondary)]">Re-order today's scheduled jobs for maximum efficiency.</p>
                     </div>
                     <button id="optimizeRoutesBtn" class="bg-[var(--bg-orange)] text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-[var(--bg-orange-dark)] transition-colors text-sm"><span class="material-icons !text-xl">route</span><span>Optimize Routes</span></button>
                 </div>
                 <div class="card p-4">
                     <h2 class="text-lg font-bold mb-4 text-[var(--text-orange)]">Optimized Routes for Today</h2>
-                    <div id="optimized-routes-container" class="space-y-4">
+                    <div id="optimized-routes-container" class="space-y-6">
                          <p class="text-gray-400 text-center py-4">Click "Optimize Routes" to generate today's schedule.</p>
                     </div>
                     <div id="approve-routes-section" class="mt-6 text-center" style="display: none;">
@@ -191,8 +194,7 @@
     <script type="module">
         // Import Firebase services
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, writeBatch, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -207,12 +209,11 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
         
         // --- Global State ---
         let technicians = [];
         let jobs = [];
-        let optimizedRoutes = null; // To store the AI's response
+        let optimizedRoutes = null;
 
         // --- UI Elements ---
         const techniciansList = document.getElementById('technicians-list');
@@ -252,7 +253,26 @@
         const navLinks = sidebarNav.querySelectorAll('.nav-link');
         const tabContents = document.querySelectorAll('.tab-content');
 
-        // --- Render Functions (Existing functions are unchanged) ---
+        // --- Authentication Check and Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = JSON.parse(sessionStorage.getItem('user'));
+            const adminNameEl = document.getElementById('adminName');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            if (!user || user.role !== 'admin') {
+                window.location.href = 'login.html';
+                return; 
+            }
+
+            adminNameEl.textContent = user.name || 'Admin';
+            logoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('user');
+                window.location.href = 'login.html';
+            });
+            main();
+        });
+        
+        // --- Render Functions ---
         const renderTechniciansList = () => {
             if (!techniciansList) return;
             techniciansList.innerHTML = '';
@@ -264,7 +284,7 @@
             onlineTechs.forEach(tech => {
                 const techElement = document.createElement('div');
                 techElement.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
-                techElement.innerHTML = `<div class="flex items-center space-x-3"><img alt="${tech.name}" class="w-10 h-10 rounded-full" src="${tech.avatar}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/FFA500/000000?text=${tech.name.charAt(0)}';"><div><p class="font-semibold text-sm text-[var(--text-primary)]">${tech.name}</p><p class="text-xs text-[var(--text-tertiary)]">ID: ${tech.id.substring(0, 7)}...</p></div></div><div class="flex items-center space-x-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xs text-[var(--text-secondary)]">Online</span></div>`;
+                techElement.innerHTML = `<div class="flex items-center space-x-3"><img alt="${tech.name}" class="w-10 h-10 rounded-full" src="https://placehold.co/40x40/FFA500/FFFFFF?text=${tech.name.charAt(0)}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/FFA500/000000?text=${tech.name.charAt(0)}';"><div><p class="font-semibold text-sm text-[var(--text-primary)]">${tech.name}</p><p class="text-xs text-[var(--text-tertiary)]">ID: ${tech.id.substring(0, 7)}...</p></div></div><div class="flex items-center space-x-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xs text-[var(--text-secondary)]">Online</span></div>`;
                 techniciansList.appendChild(techElement);
             });
         };
@@ -290,7 +310,7 @@
                         </div>
                         <div class="flex items-center text-sm text-[var(--text-secondary)] mb-4">
                             <span class="material-icons text-base mr-2">work_history</span>
-                            <span>Capacity: ${tech.capacity} jobs</span>
+                            <span>Capacity: ${tech.capacity || 5} jobs</span>
                         </div>
                     </div>
                     <div class="flex flex-col items-start space-y-2">
@@ -329,7 +349,7 @@
                 return;
             }
             jobs.forEach(job => {
-                const statusClass = `status-${job.status.replace(/ /g, '-')}`;
+                const statusClass = `status-${job.status.toLowerCase().replace(/ /g, '-')}`;
                 const statusText = job.status.replace(/-/g, ' ');
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50 transition-colors';
@@ -338,78 +358,16 @@
             });
         };
         
-        const renderSchedule = () => {
-            if (!scheduleContainer) return;
-            scheduleContainer.innerHTML = '';
-            const scheduledJobs = jobs.filter(job => job.status === 'scheduled' && job.technicianId);
-            if (scheduledJobs.length === 0) {
-                scheduleContainer.innerHTML = `<p class="text-gray-400">No jobs scheduled for today.</p>`;
-                return;
-            }
-            const jobsByTech = scheduledJobs.reduce((acc, job) => {
-                (acc[job.technicianId] = acc[job.technicianId] || []).push(job);
-                return acc;
-            }, {});
-
-            for (const techId in jobsByTech) {
-                const tech = technicians.find(t => t.id === techId);
-                if (!tech) continue;
-
-                const techScheduleCard = document.createElement('div');
-                techScheduleCard.className = 'p-3 bg-gray-50 rounded-lg';
-                
-                let jobsHtml = '';
-                jobsByTech[techId].forEach(job => {
-                    const scheduledTime = job.scheduledTime || "TBD";
-                    const scheduledEndTime = job.scheduledEndTime || "TBD";
-                    const startTimeParts = scheduledTime.split(' ');
-                    const endTimeParts = scheduledEndTime.split(' ');
-                    
-                    jobsHtml += `
-                        <div class="flex items-start space-x-4">
-                            <div class="flex flex-col items-center w-16 shrink-0">
-                                <div class="text-center">
-                                    <p class="font-bold text-sm text-gray-800">${startTimeParts[0]}</p>
-                                    <p class="text-xs text-[var(--text-tertiary)]">${startTimeParts[1] || ''}</p>
-                                </div>
-                                <div class="w-px h-3 bg-[var(--border-secondary)] my-1"></div>
-                                <div class="text-center">
-                                    <p class="font-bold text-sm text-gray-800">${endTimeParts[0]}</p>
-                                    <p class="text-xs text-[var(--text-tertiary)]">${endTimeParts[1] || ''}</p>
-                                </div>
-                            </div>
-                            <div class="pt-0">
-                                <p class="font-semibold text-sm text-gray-800">${job.issue}</p>
-                                <p class="text-xs text-[var(--text-secondary)]">${job.address}</p>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                techScheduleCard.innerHTML = `
-                    <div class="flex items-center space-x-3 mb-3 pb-3 border-b border-[var(--border-secondary)]">
-                        <img alt="${tech.name}" class="w-8 h-8 rounded-full" src="${tech.avatar}" onerror="this.onerror=null;this.src='https://placehold.co/32x32/FFA500/000000?text=${tech.name.charAt(0)}';">
-                        <div>
-                            <p class="font-bold text-base text-gray-800">${tech.name}</p>
-                            <p class="text-xs text-[var(--text-tertiary)]">${tech.id.substring(0,7)}...</p>
-                        </div>
-                    </div>
-                    <div class="space-y-4">${jobsHtml}</div>
-                `;
-                scheduleContainer.appendChild(techScheduleCard);
-            }
-        };
-
         const updateStats = () => {
-            if (pendingJobsEl) pendingJobsEl.textContent = jobs.filter(j => j.status === 'needs-scheduling' || j.status === 'New').length;
-            if (completedJobsEl) completedJobsEl.textContent = jobs.filter(j => j.status === 'scheduled').length;
+            if (pendingJobsEl) pendingJobsEl.textContent = jobs.filter(j => j.status === 'needs-scheduling').length;
+            if (completedJobsEl) completedJobsEl.textContent = jobs.filter(j => j.status === 'scheduled' || j.status === 'dispatched').length;
             if (totalTechsStatEl) totalTechsStatEl.textContent = technicians.length;
         };
 
         const setCalendarDate = () => {
             if (!calendarDate || !calendarMonthYear) return;
             const now = new Date();
-            calendarDate.textContent = now.getDate();
+            calendarDate.textContent = now.getDate().toString().padStart(2, '0');
             calendarMonthYear.textContent = `${now.toLocaleString('default', { month: 'long' })}, ${now.getFullYear()}`;
         };
 
@@ -418,116 +376,110 @@
             renderTechniciansCards();
             renderUpcomingJobs();
             renderJobsTable();
-            renderSchedule();
             updateStats();
         };
 
-        // --- Event Listeners (Existing listeners are unchanged) ---
-        sidebarNav.addEventListener('click', (e) => {
-            const link = e.target.closest('.nav-link');
-            if (!link) return;
-            e.preventDefault();
-            const tabId = link.dataset.tab;
-            navLinks.forEach(navLink => {
-                navLink.classList.remove('active');
-                navLink.classList.add('text-gray-500', 'hover:text-[var(--text-orange)]', 'hover:bg-gray-100');
+        // --- Event Listeners & Modal Logic ---
+        function setupEventListeners() {
+            sidebarNav.addEventListener('click', (e) => {
+                const link = e.target.closest('.nav-link');
+                if (!link) return;
+                e.preventDefault();
+                const tabId = link.dataset.tab;
+                navLinks.forEach(navLink => {
+                    navLink.classList.remove('active', 'text-gray-500', 'hover:text-[var(--text-orange)]', 'hover:bg-gray-100');
+                    if (navLink === link) {
+                        navLink.classList.add('active');
+                    } else {
+                        navLink.classList.add('text-gray-500', 'hover:text-[var(--text-orange)]', 'hover:bg-gray-100');
+                    }
+                });
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                document.getElementById(`${tabId}-tab`).classList.add('active');
             });
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            link.classList.add('active');
-            link.classList.remove('text-gray-500', 'hover:text-[var(--text-orange)]', 'hover:bg-gray-100');
-            const activeTab = document.getElementById(`${tabId}-tab`);
-            if (activeTab) activeTab.classList.add('active');
-        });
 
-        const openJobModal = () => jobModal.style.display = 'block';
-        const closeJobModal = () => jobModal.style.display = 'none';
-        const openTechModal = () => techModal.style.display = 'block';
-        const closeTechModal = () => techModal.style.display = 'none';
-        const openManageTechModal = (tech) => {
-            document.getElementById('manageTechId').value = tech.id;
-            document.getElementById('manageTechName').value = tech.name;
-            document.getElementById('manageTechLocation').value = tech.location;
-            document.getElementById('manageTechCapacity').value = tech.capacity;
-            manageTechModal.style.display = 'block';
-        };
-        const closeManageTechModal = () => manageTechModal.style.display = 'none';
-        const openScheduleJobModal = (job) => {
-            document.getElementById('scheduleJobId').value = job.id;
-            document.getElementById('schedule-customer-name').textContent = job.customerName;
-            document.getElementById('schedule-address').textContent = job.address;
-            document.getElementById('schedule-issue').textContent = job.issue;
-            document.getElementById('schedule-warranty').textContent = job.warrantyProvider || 'N/A';
-            document.getElementById('schedule-plan').textContent = job.planType || 'N/A';
-            document.getElementById('schedule-dispatch').textContent = job.dispatchPoNumber || 'N/A';
+            const openModal = (modal) => modal.style.display = 'block';
+            const closeModal = (modal) => modal.style.display = 'none';
+
+            createJobBtn.onclick = () => openModal(jobModal);
+            createJobBtn2.onclick = () => openModal(jobModal);
+            closeJobModalBtn.onclick = () => closeModal(jobModal);
             
-            assignTechnicianSelect.innerHTML = '<option value="">Select a technician...</option>';
-            technicians.forEach(tech => {
-                const option = document.createElement('option');
-                option.value = tech.id;
-                option.textContent = `${tech.name} (${tech.location})`;
-                assignTechnicianSelect.appendChild(option);
+            addTechnicianBtn.onclick = () => openModal(techModal);
+            closeTechModalBtn.onclick = () => closeModal(techModal);
+            
+            closeManageTechModalBtn.onclick = () => closeModal(manageTechModal);
+            closeScheduleJobModalBtn.onclick = () => closeModal(scheduleJobModal);
+
+            techniciansCardGrid.addEventListener('click', (e) => {
+                const button = e.target.closest('.manage-tech-btn');
+                if (button) {
+                    const techId = button.dataset.id;
+                    const tech = technicians.find(t => t.id === techId);
+                    if (tech) {
+                        document.getElementById('manageTechId').value = tech.id;
+                        document.getElementById('manageTechName').value = tech.name;
+                        document.getElementById('manageTechLocation').value = tech.location;
+                        document.getElementById('manageTechCapacity').value = tech.capacity || 5;
+                        openModal(manageTechModal);
+                    }
+                }
+            });
+            
+            jobsTableBody.addEventListener('click', (e) => {
+                const button = e.target.closest('.view-job-btn');
+                if (button) {
+                    const jobId = button.dataset.id;
+                    const job = jobs.find(j => j.id === jobId);
+                    if (job) {
+                        document.getElementById('scheduleJobId').value = job.id;
+                        document.getElementById('schedule-customer-name').textContent = job.customerName;
+                        document.getElementById('schedule-address').textContent = job.address;
+                        document.getElementById('schedule-issue').textContent = job.issue;
+                        document.getElementById('schedule-warranty').textContent = job.warrantyProvider || 'N/A';
+                        document.getElementById('schedule-plan').textContent = job.planType || 'N/A';
+                        document.getElementById('schedule-dispatch').textContent = job.dispatchPoNumber || 'N/A';
+                        
+                        assignTechnicianSelect.innerHTML = '<option value="">Select a technician...</option>';
+                        technicians.filter(t => t.status === 'Available').forEach(tech => {
+                            const option = document.createElement('option');
+                            option.value = tech.id;
+                            option.textContent = `${tech.name} (${tech.location})`;
+                            assignTechnicianSelect.appendChild(option);
+                        });
+                        openModal(scheduleJobModal);
+                    }
+                }
             });
 
-            scheduleJobModal.style.display = 'block';
-        };
-        const closeScheduleJobModal = () => scheduleJobModal.style.display = 'none';
+            window.onclick = (event) => { 
+                if (event.target == jobModal) closeModal(jobModal);
+                if (event.target == techModal) closeModal(techModal);
+                if (event.target == manageTechModal) closeModal(manageTechModal);
+                if (event.target == scheduleJobModal) closeModal(scheduleJobModal);
+            };
 
-        if (createJobBtn) createJobBtn.onclick = openJobModal;
-        if (createJobBtn2) createJobBtn2.onclick = openJobModal;
-        if (closeJobModalBtn) closeJobModalBtn.onclick = closeJobModal;
-        
-        if (addTechnicianBtn) addTechnicianBtn.onclick = openTechModal;
-        if (closeTechModalBtn) closeTechModalBtn.onclick = closeTechModal;
-        
-        if (closeManageTechModalBtn) closeManageTechModalBtn.onclick = closeManageTechModal;
-        if (closeScheduleJobModalBtn) closeScheduleJobModalBtn.onclick = closeScheduleJobModal;
-
-        techniciansCardGrid.addEventListener('click', (e) => {
-            const button = e.target.closest('.manage-tech-btn');
-            if (button) {
-                const techId = button.dataset.id;
-                const tech = technicians.find(t => t.id === techId);
-                if (tech) openManageTechModal(tech);
-            }
-        });
-        
-        jobsTableBody.addEventListener('click', (e) => {
-            const button = e.target.closest('.view-job-btn');
-            if (button) {
-                const jobId = button.dataset.id;
-                const job = jobs.find(j => j.id === jobId);
-                if (job) openScheduleJobModal(job);
-            }
-        });
-
-        window.onclick = (event) => { 
-            if (event.target == jobModal) closeJobModal();
-            if (event.target == techModal) closeTechModal();
-            if (event.target == manageTechModal) closeManageTechModal();
-            if (event.target == scheduleJobModal) closeScheduleJobModal();
-        };
+            optimizeRoutesBtn.addEventListener('click', handleOptimizeRoutes);
+            approveRoutesBtn.addEventListener('click', handleApproveRoutes);
+        }
         
         // --- Firestore Logic ---
         async function setupFirestoreListeners() {
-            const jobsCollectionRef = collection(db, "service_calls");
-            const techniciansCollectionRef = collection(db, "technicians");
-
-            onSnapshot(jobsCollectionRef, (snapshot) => {
-                // *** NEW: Filter out jobs that are not work orders ***
-                jobs = snapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(job => job.isWorkOrder !== false); 
-
-                // Map Firestore fields to frontend fields
-                jobs = jobs.map(job => {
+            onSnapshot(collection(db, "service_calls"), (snapshot) => {
+                const allJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                jobs = allJobs.filter(job => job.isWorkOrder !== false).map(job => {
+                    let status = job.status || 'needs-scheduling';
+                    if (status === 'New') status = 'needs-scheduling';
                     return {
                         id: job.id,
                         customerName: job.customerName,
                         address: job.customerAddress,
                         issue: job.jobDescription,
                         phone: job.customerPhone,
-                        status: job.status === 'New' ? 'needs-scheduling' : job.status,
+                        status: status,
                         technicianId: job.technicianId || null,
+                        scheduledDate: job.scheduledDate || null,
                         scheduledTime: job.scheduledTime || 'TBD',
                         scheduledEndTime: job.scheduledEndTime || 'TBD',
                         warrantyProvider: job.warrantyProvider || 'N/A',
@@ -535,13 +487,11 @@
                         dispatchPoNumber: job.dispatchOrPoNumber || 'N/A'
                     };
                 });
-                console.log("Filtered Jobs updated from Firestore:", jobs);
                 renderAll();
             });
 
-            onSnapshot(techniciansCollectionRef, (snapshot) => {
+            onSnapshot(collection(db, "technicians"), (snapshot) => {
                 technicians = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Technicians updated from Firestore:", technicians);
                 renderAll();
             });
         }
@@ -549,40 +499,36 @@
         if (jobForm) {
             jobForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                try {
-                    await addDoc(collection(db, "service_calls"), {
-                        customerName: jobForm.customerName.value,
-                        customerAddress: jobForm.jobLocation.value,
-                        jobDescription: jobForm.jobIssue.value,
-                        customerPhone: jobForm.customerPhone.value,
-                        status: 'New',
-                        receivedAt: serverTimestamp()
-                    });
-                    closeJobModal();
-                    jobForm.reset();
-                } catch (error) {
-                    console.error("Error adding job to Firestore: ", error);
-                }
+                await addDoc(collection(db, "service_calls"), {
+                    customerName: jobForm.customerName.value,
+                    customerAddress: jobForm.jobLocation.value,
+                    jobDescription: jobForm.jobIssue.value,
+                    customerPhone: jobForm.customerPhone.value,
+                    status: 'needs-scheduling',
+                    receivedAt: serverTimestamp()
+                });
+                jobForm.reset();
+                jobModal.style.display = 'none';
             });
         }
 
         if (techForm) {
             techForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const newId = `T-${Math.floor(10000 + Math.random() * 90000)}`;
-                try {
-                    await addDoc(collection(db, "technicians"), {
-                        name: techForm.techName.value,
-                        location: techForm.techLocation.value,
-                        status: 'Available', 
-                        avatar: `https://i.pravatar.cc/150?u=${newId}`,
-                        capacity: 5 
-                    });
-                    closeTechModal();
-                    techForm.reset();
-                } catch (error) {
-                    console.error("Error adding technician to Firestore: ", error);
-                }
+                const techName = techForm.techName.value;
+                const techLocation = techForm.techLocation.value;
+                const techEmail = `${techName.replace(/\s+/g, '')}@FirstStep.com`;
+                const techPassword = '123456';
+
+                await addDoc(collection(db, "users"), {
+                    name: techName, email: techEmail, password: techPassword, role: 'technician'
+                });
+                await addDoc(collection(db, "technicians"), {
+                    name: techName, location: techLocation, status: 'Available', capacity: 5 
+                });
+                
+                techForm.reset();
+                techModal.style.display = 'none';
             });
         }
         
@@ -590,16 +536,11 @@
             manageTechForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const techId = document.getElementById('manageTechId').value;
-                const docRef = doc(db, "technicians", techId);
-                try {
-                    await updateDoc(docRef, {
-                        location: document.getElementById('manageTechLocation').value,
-                        capacity: parseInt(document.getElementById('manageTechCapacity').value, 10)
-                    });
-                    closeManageTechModal();
-                } catch (error) {
-                    console.error("Error updating technician: ", error);
-                }
+                await updateDoc(doc(db, "technicians", techId), {
+                    location: document.getElementById('manageTechLocation').value,
+                    capacity: parseInt(document.getElementById('manageTechCapacity').value, 10)
+                });
+                manageTechModal.style.display = 'none';
             });
         }
         
@@ -607,59 +548,55 @@
             scheduleJobForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const jobId = document.getElementById('scheduleJobId').value;
-                const docRef = doc(db, "service_calls", jobId);
                 const timeSlot = document.getElementById('scheduleTime').value;
                 const [startTime, endTime] = timeSlot.split(' - ');
-                try {
-                    await updateDoc(docRef, {
-                        status: 'scheduled',
-                        scheduledTime: startTime,
-                        scheduledEndTime: endTime,
-                        scheduledDate: document.getElementById('scheduleDate').value,
-                        technicianId: document.getElementById('assignTechnician').value
-                    });
-                    closeScheduleJobModal();
-                } catch (error) {
-                    console.error("Error scheduling job: ", error);
-                }
+                
+                await updateDoc(doc(db, "service_calls", jobId), {
+                    status: 'scheduled',
+                    scheduledTime: startTime.trim(),
+                    scheduledEndTime: endTime.trim(),
+                    scheduledDate: document.getElementById('scheduleDate').value,
+                    technicianId: document.getElementById('assignTechnician').value
+                });
+                scheduleJobModal.style.display = 'none';
             });
         }
 
         // --- Route Optimization Logic ---
         async function handleOptimizeRoutes() {
-            optimizedRoutesContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Optimizing routes, please wait...</p>';
+            optimizedRoutesContainer.innerHTML = `<p class="text-center text-gray-500">Calculating optimal routes...</p>`;
             approveRoutesSection.style.display = 'none';
 
-            const scheduledJobs = jobs.filter(job => job.status === 'scheduled' && job.technicianId);
-            if (scheduledJobs.length === 0) {
-                optimizedRoutesContainer.innerHTML = '<p class="text-red-500 text-center py-4">No scheduled jobs to optimize.</p>';
+            const today = new Date().toISOString().split('T')[0];
+            const jobsForToday = jobs.filter(j => j.status === 'scheduled' && j.scheduledDate === today);
+            
+            if (jobsForToday.length === 0) {
+                optimizedRoutesContainer.innerHTML = `<p class="text-center text-gray-500">No jobs scheduled for today to optimize.</p>`;
                 return;
             }
 
-            const jobsByTech = scheduledJobs.reduce((acc, job) => {
-                const tech = technicians.find(t => t.id === job.technicianId);
-                if (tech) {
-                    (acc[tech.name] = acc[tech.name] || []).push({
-                        jobId: job.id,
-                        address: job.address,
-                        issue: job.issue
-                    });
-                }
-                return acc;
-            }, {});
+            const availableTechnicians = technicians.filter(t => t.status === 'Available');
+            if (availableTechnicians.length === 0) {
+                optimizedRoutesContainer.innerHTML = `<p class="text-center text-red-500">No available technicians to assign routes to.</p>`;
+                return;
+            }
 
             const prompt = `
-                You are a logistics optimization expert for a technician dispatch company.
-                Given the following list of jobs for each technician for today, create the most efficient route.
-                Consider the shortest travel time between locations, avoiding traffic, and saving fuel.
-                The starting point for each technician is their home location, which you can assume is near their first job.
-                
-                For each technician, provide a JSON object with the technician's name and an array of their jobs in the optimized order. Each job in the array should be an object with 'jobId', 'address', and 'issue'.
-                
-                Technician Jobs:
-                ${JSON.stringify(jobsByTech, null, 2)}
+                You are an expert logistics coordinator for a service company with access to real-time Google Maps data.
+                Your task is to create the most efficient daily routes for a team of technicians.
 
-                Your response must be a single valid JSON object containing an array of these technician routes. For example: { "optimizedRoutes": [ { "technicianName": "John Doe", "route": [...] } ] }
+                Here are today's scheduled jobs:
+                ${JSON.stringify(jobsForToday.map(j => ({ jobId: j.id, address: j.address, issue: j.issue, timeSlot: `${j.scheduledTime}-${j.scheduledEndTime}` })), null, 2)}
+
+                And here are the available technicians and their starting locations:
+                ${JSON.stringify(availableTechnicians.map(t => ({ techName: t.name, techId: t.id, startLocation: t.location })), null, 2)}
+
+                Follow these steps precisely:
+                1.  First, for each job, determine which available technician is geographically closest to that job's address. Assign the job to that technician.
+                2.  After all jobs are assigned, for each technician, look at all the jobs they have been assigned.
+                3.  Create an optimized route for each technician that minimizes total travel time and fuel consumption, considering typical traffic patterns for the time of day indicated by the job's time slot. The route should be a specific, ordered sequence of jobs.
+
+                Your final output must be a single valid JSON object with one key, "optimizedRoutes". The value should be an array where each element represents a technician. Each technician object must have "technicianName", "technicianId", and a "route" array. The "route" array must contain the job objects (with jobId, address, issue, scheduledTime, scheduledEndTime) in the most efficient order.
             `;
 
             try {
@@ -699,92 +636,114 @@
 
         function renderOptimizedRoutes(routes) {
             optimizedRoutesContainer.innerHTML = '';
-            routes.forEach(techRoute => {
-                const tech = technicians.find(t => t.name === techRoute.technicianName);
-                if (!tech) return;
-
-                const techScheduleCard = document.createElement('div');
-                techScheduleCard.className = 'p-3 bg-gray-50 rounded-lg';
+            let hasRoutes = false;
+            routes.forEach(routeInfo => {
+                if (!routeInfo.route || routeInfo.route.length === 0) return;
+                hasRoutes = true;
                 
-                let jobsHtml = '';
-                techRoute.route.forEach((job, index) => {
-                    jobsHtml += `
-                        <div class="flex items-start space-x-4">
-                            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--bg-orange)] text-white font-bold text-sm shrink-0">${index + 1}</div>
-                            <div class="pt-1">
-                                <p class="font-semibold text-sm text-gray-800">${job.issue}</p>
-                                <p class="text-xs text-[var(--text-secondary)]">${job.address}</p>
-                            </div>
-                        </div>
-                    `;
-                });
+                const tech = technicians.find(t => t.id === routeInfo.technicianId);
 
-                techScheduleCard.innerHTML = `
-                    <div class="flex items-center space-x-3 mb-3 pb-3 border-b border-[var(--border-secondary)]">
-                        <img alt="${tech.name}" class="w-8 h-8 rounded-full" src="${tech.avatar}" onerror="this.onerror=null;this.src='https://placehold.co/32x32/FFA500/000000?text=${tech.name.charAt(0)}';">
-                        <div>
-                            <p class="font-bold text-base text-gray-800">${tech.name}</p>
-                            <p class="text-xs text-[var(--text-tertiary)]">${tech.id.substring(0,7)}...</p>
+                const routeCard = document.createElement('div');
+                routeCard.className = 'bg-orange-50 border border-orange-200 text-gray-800 p-6 rounded-2xl';
+                
+                let jobsHtml = routeInfo.route.map((job, index) => {
+                    const origin = index === 0 ? tech.location : routeInfo.route[index - 1].address;
+                    const destination = job.address;
+                    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+                    
+                    return `
+                    <div class="flex items-stretch gap-4">
+                        <div class="flex flex-col justify-center items-center w-24 py-1">
+                            <div class="text-sm font-semibold text-gray-600">${job.scheduledTime}</div>
+                        </div>
+                        <div class="flex-1 border-l-2 border-orange-200 p-4 flex items-center relative">
+                             <div class="absolute -left-[9px] top-1/2 -translate-y-1/2 w-4 h-4 bg-orange-400 rounded-full border-2 border-white"></div>
+                             <div>
+                                <p class="font-bold text-gray-900">${job.issue}</p>
+                                <p class="text-sm text-gray-500">${job.address}</p>
+                                <a href="${googleMapsUrl}" target="_blank" class="text-sm text-orange-600 hover:underline font-semibold mt-1 inline-flex items-center gap-1">
+                                    Get Directions
+                                    <span class="material-icons !text-sm">open_in_new</span>
+                                </a>
+                             </div>
                         </div>
                     </div>
-                    <div class="space-y-4">${jobsHtml}</div>
+                `}).join('');
+
+                routeCard.innerHTML = `
+                    <div class="flex items-center gap-4 mb-6">
+                        <img src="https://placehold.co/40x40/fed7aa/f97316?text=${routeInfo.technicianName.charAt(0)}" alt="${routeInfo.technicianName}" class="w-10 h-10 rounded-full">
+                        <div>
+                            <h3 class="font-bold text-gray-900 text-lg">${routeInfo.technicianName}</h3>
+                            <p class="text-sm text-gray-500">T-${routeInfo.technicianId.substring(0,5).toUpperCase()}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        ${jobsHtml}
+                    </div>
                 `;
-                optimizedRoutesContainer.appendChild(techScheduleCard);
+                optimizedRoutesContainer.appendChild(routeCard);
             });
+
+            if (!hasRoutes) {
+                 optimizedRoutesContainer.innerHTML = `<p class="text-center text-gray-500">No jobs scheduled for available technicians today.</p>`;
+                 approveRoutesSection.style.display = 'none';
+            }
         }
 
         async function handleApproveRoutes() {
             if (!optimizedRoutes) {
-                alert("No optimized routes to approve.");
+                console.error("No routes to approve.");
                 return;
             }
-            
-            approveRoutesBtn.disabled = true;
-            approveRoutesBtn.textContent = 'Approving...';
 
-            try {
-                const batch = writeBatch(db);
-                const today = new Date().toISOString().split('T')[0];
-                
-                optimizedRoutes.forEach(route => {
-                    const docRef = doc(db, "optimized_routes", `${today}_${route.technicianName}`);
-                    batch.set(docRef, {
-                        technicianName: route.technicianName,
-                        optimizedRoute: route.route,
-                        approvedAt: serverTimestamp(),
-                        date: today
+            const batch = writeBatch(db);
+            const today = new Date().toISOString().split('T')[0];
+
+            optimizedRoutes.forEach(routeInfo => {
+                if (routeInfo.route && routeInfo.route.length > 0) {
+                    const routeDocRef = doc(db, "optimized_routes", `${today}_${routeInfo.technicianName}`);
+                    const routePayload = {
+                        technicianName: routeInfo.technicianName,
+                        technicianId: routeInfo.technicianId,
+                        date: today,
+                        optimizedRoute: routeInfo.route.map(j => ({
+                            jobId: j.jobId,
+                            issue: j.issue,
+                            address: j.address,
+                            scheduledTime: j.scheduledTime,
+                            scheduledEndTime: j.scheduledEndTime
+                        }))
+                    };
+                    batch.set(routeDocRef, routePayload, { merge: true });
+
+                    routeInfo.route.forEach(job => {
+                        const jobRef = doc(db, "service_calls", job.jobId);
+                        batch.update(jobRef, { 
+                            technicianId: routeInfo.technicianId,
+                            status: "dispatched" 
+                        });
                     });
-                });
+                }
+            });
 
-                await batch.commit();
-                alert("Routes approved and saved successfully!");
-                approveRoutesBtn.textContent = 'Routes Approved';
-                approveRoutesSection.style.display = 'none';
-
-            } catch (error) {
-                console.error("Error approving routes:", error);
-                alert("Failed to approve routes. Please check the console.");
-                approveRoutesBtn.disabled = false;
-                approveRoutesBtn.textContent = 'Approve and Send Routes';
-            }
-        }
-
-        optimizeRoutesBtn.addEventListener('click', handleOptimizeRoutes);
-        approveRoutesBtn.addEventListener('click', handleApproveRoutes);
-
-        // --- Authentication and Initialization ---
-        async function main() {
-            setCalendarDate();
             try {
-                await signInAnonymously(auth);
-                console.log("Signed in anonymously.");
-                setupFirestoreListeners();
+                await batch.commit();
+                optimizedRoutesContainer.innerHTML = `<p class="text-center text-green-600 font-semibold py-4">Optimized routes approved and sent to technicians!</p>`;
+                approveRoutesSection.style.display = 'none';
+                optimizedRoutes = null; 
             } catch (error) {
-                console.error("Anonymous authentication failed:", error);
+                console.error("Error approving routes: ", error);
+                optimizedRoutesContainer.innerHTML = `<p class="text-center text-red-500">Failed to approve routes. Please try again.</p>`;
             }
         }
+        
+        function main() {
+            setCalendarDate();
+            setupFirestoreListeners();
+            setupEventListeners();
+        }
 
-        main();
     </script>
 </body>
 </html>
