@@ -564,6 +564,10 @@
 
         // --- Route Optimization Logic ---
         async function handleOptimizeRoutes() {
+            // *** NEW: URL for our secure proxy function ***
+            // You must replace this with the URL you get after deploying the new helper function.
+            const proxyFunctionUrl = "https://us-central1-polished-bounty-467515-r8.cloudfunctions.net/optimizeRoutesProxy";
+
             optimizedRoutesContainer.innerHTML = `<p class="text-center text-gray-500">Calculating optimal routes...</p>`;
             approveRoutesSection.style.display = 'none';
 
@@ -581,47 +585,27 @@
                 return;
             }
 
-            const prompt = `
-                You are an expert logistics coordinator for a service company with access to real-time Google Maps data.
-                Your task is to create the most efficient daily routes for a team of technicians.
-
-                Here are today's scheduled jobs:
-                ${JSON.stringify(jobsForToday.map(j => ({ jobId: j.id, address: j.address, issue: j.issue, timeSlot: `${j.scheduledTime}-${j.scheduledEndTime}` })), null, 2)}
-
-                And here are the available technicians and their starting locations:
-                ${JSON.stringify(availableTechnicians.map(t => ({ techName: t.name, techId: t.id, startLocation: t.location })), null, 2)}
-
-                Follow these steps precisely:
-                1.  First, for each job, determine which available technician is geographically closest to that job's address. Assign the job to that technician.
-                2.  After all jobs are assigned, for each technician, look at all the jobs they have been assigned.
-                3.  Create an optimized route for each technician that minimizes total travel time and fuel consumption, considering typical traffic patterns for the time of day indicated by the job's time slot. The route should be a specific, ordered sequence of jobs.
-
-                Your final output must be a single valid JSON object with one key, "optimizedRoutes". The value should be an array where each element represents a technician. Each technician object must have "technicianName", "technicianId", and a "route" array. The "route" array must contain the job objects (with jobId, address, issue, scheduledTime, scheduledEndTime) in the most efficient order.
-            `;
+            const payload = {
+                jobsForToday: jobsForToday.map(j => ({ jobId: j.id, address: j.address, issue: j.issue, timeSlot: `${j.scheduledTime}-${j.scheduledEndTime}` })),
+                availableTechnicians: availableTechnicians.map(t => ({ techName: t.name, techId: t.id, startLocation: t.location }))
+            };
 
             try {
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiKey = firebaseConfig.apiKey; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
+                const response = await fetch(proxyFunctionUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
-                    const errorBody = await response.json();
-                    throw new Error(`AI API Error: ${errorBody.error.message}`);
+                    const errorText = await response.text();
+                    throw new Error(`AI Proxy Error: ${errorText}`);
                 }
                 
                 const result = await response.json();
                 
-                if (result.candidates && result.candidates[0].content.parts[0].text) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    const cleanedJson = text.replace(/\\\`\\\`\\\`json/g, '').replace(/\\\`\\\`\\\`/g, '').trim();
-                    optimizedRoutes = JSON.parse(cleanedJson).optimizedRoutes;
+                if (result.optimizedRoutes) {
+                    optimizedRoutes = result.optimizedRoutes;
                     renderOptimizedRoutes(optimizedRoutes);
                     approveRoutesSection.style.display = 'block';
                 } else {
